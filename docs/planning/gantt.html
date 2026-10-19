@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Oddyseus: Journey's End — Production Gantt Chart</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #F5F1E8;
+    --panel: #FFFFFF;
+    --ink: #2A2118;
+    --muted: #7A6E5C;
+    --line: #DDD3C0;
+    --gold: #C9962E;
+    --teal: #3F7E70;
+    --rust: #B25A3D;
+    --violet: #7C5CB0;
+    --grid-weekend: #ECE5D6;
+    --milestone: #B02E3A;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1E1912;
+      --panel: #2A231A;
+      --ink: #F1E9D8;
+      --muted: #B3A78D;
+      --line: #43392A;
+      --grid-weekend: #241E16;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1E1912;
+    --panel: #2A231A;
+    --ink: #F1E9D8;
+    --muted: #B3A78D;
+    --line: #43392A;
+    --grid-weekend: #241E16;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
+    padding: 1.25rem clamp(0.75rem, 3vw, 2rem) 2rem;
+  }
+  h1 { font-size: clamp(1.2rem, 3vw, 1.7rem); margin: 0 0 0.2rem; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin: 0 0 1rem; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 0.9rem 1.4rem;
+    margin-bottom: 1rem; font-size: 0.85rem; color: var(--muted);
+  }
+  .legend span.swatch {
+    display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+    margin-right: 0.4rem; vertical-align: middle;
+  }
+  .scroll-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    max-width: 100%;
+  }
+  .gantt {
+    position: relative;
+    min-width: 1180px;
+  }
+  .label-col-w { width: 300px; }
+  .chart-header {
+    display: flex;
+    border-bottom: 2px solid var(--line);
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    z-index: 3;
+  }
+  .label-col {
+    width: 300px;
+    flex-shrink: 0;
+    padding: 0.6rem 0.8rem;
+    font-weight: bold;
+    font-size: 0.85rem;
+    border-right: 1px solid var(--line);
+    display: flex;
+    align-items: flex-end;
+  }
+  .timeline-header {
+    position: relative;
+    flex-grow: 1;
+    height: 46px;
+  }
+  .month-band {
+    position: absolute;
+    top: 0; height: 22px;
+    border-left: 1px solid var(--line);
+    font-size: 0.78rem;
+    font-weight: bold;
+    padding: 3px 0 0 6px;
+    color: var(--muted);
+  }
+  .week-tick {
+    position: absolute;
+    top: 22px; height: 24px;
+    border-left: 1px solid var(--line);
+    font-size: 0.65rem;
+    color: var(--muted);
+    padding-top: 3px;
+    padding-left: 3px;
+  }
+  .body-row {
+    display: flex;
+    border-bottom: 1px solid var(--line);
+  }
+  .body-row.phase-head {
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+  }
+  .row-label {
+    width: 300px;
+    flex-shrink: 0;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.82rem;
+    border-right: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+  }
+  .phase-head .row-label { font-weight: bold; }
+  .row-track {
+    position: relative;
+    flex-grow: 1;
+    height: 34px;
+  }
+  .grid-col {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-left: 1px solid var(--line);
+  }
+  .grid-col.weekend { background: var(--grid-weekend); }
+  .bar {
+    position: absolute;
+    top: 6px; height: 22px;
+    border-radius: 5px;
+    font-size: 0.68rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  .milestone {
+    position: absolute;
+    top: 4px;
+    width: 18px; height: 18px;
+    transform: translateX(-9px) rotate(45deg);
+    background: var(--milestone);
+    border: 2px solid #fff;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+  }
+  .milestone-label {
+    position: absolute;
+    top: 24px;
+    font-size: 0.66rem;
+    font-weight: bold;
+    color: var(--milestone);
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+  .key-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 0;
+    border-left: 2px dashed var(--milestone);
+    z-index: 2;
+  }
+  footer { margin-top: 1rem; font-size: 0.78rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Oddyseus: Journey's End — Production Gantt Chart</h1>
+<p class="subtitle">15 September 2026 – 23 December 2026</p>
+
+<div class="legend">
+  <div><span class="swatch" style="background:var(--muted)"></span>Pre-production</div>
+  <div><span class="swatch" style="background:var(--rust)"></span>Phase 1 — Vertical Slice</div>
+  <div><span class="swatch" style="background:var(--gold)"></span>Phase 1 — Polish / Milestone</div>
+  <div><span class="swatch" style="background:var(--teal)"></span>Phase 2 — Full Dungeon Mode</div>
+  <div><span class="swatch" style="background:var(--violet)"></span>Phase 3 — Story Mode Kickoff</div>
+  <div><span class="swatch" style="background:var(--milestone)"></span>Milestone / Key Date</div>
+</div>
+
+<div class="scroll-wrap">
+  <div class="gantt" id="gantt"></div>
+</div>
+
+<footer>Dates shown reflect a 99-day production window. Bars represent planned work spans, not guaranteed durations — adjust as real progress comes in.</footer>
+
+<script>
+const START = new Date(2026, 8, 15); // Sept 15, 2026
+const END   = new Date(2026, 11, 23); // Dec 23, 2026
+const totalDays = Math.round((END - START) / 86400000);
+const PX_PER_DAY = 12;
+const chartWidth = totalDays * PX_PER_DAY;
+
+function dayOffset(y, m, d) {
+  return Math.round((new Date(y, m, d) - START) / 86400000);
+}
+
+const rows = [
+  { type:"head", label:"Pre-production" },
+  { type:"bar", label:"GDD finalization", color:"var(--muted)", s:dayOffset(2026,8,15), e:dayOffset(2026,8,21) },
+  { type:"bar", label:"Team & tooling setup", color:"var(--muted)", s:dayOffset(2026,8,15), e:dayOffset(2026,8,19) },
+
+  { type:"head", label:"Phase 1 — Vertical Slice" },
+  { type:"bar", label:"Combat system (Coder A)", color:"var(--rust)", s:dayOffset(2026,8,22), e:dayOffset(2026,9,12) },
+  { type:"bar", label:"Systems/state: Men/Food/HP/Stamina (Coder B)", color:"var(--rust)", s:dayOffset(2026,8,22), e:dayOffset(2026,9,12) },
+  { type:"bar", label:"Map & UI shell (Coder C)", color:"var(--rust)", s:dayOffset(2026,8,22), e:dayOffset(2026,9,5) },
+  { type:"bar", label:"Art: map icons, portraits, environments", color:"var(--rust)", s:dayOffset(2026,8,22), e:dayOffset(2026,9,12) },
+  { type:"bar", label:"Sound: ambient loop, combat SFX", color:"var(--rust)", s:dayOffset(2026,8,29), e:dayOffset(2026,9,12) },
+  { type:"bar", label:"Integration & internal testing", color:"var(--gold)", s:dayOffset(2026,9,13), e:dayOffset(2026,9,17) },
+  { type:"bar", label:"Polish pass", color:"var(--gold)", s:dayOffset(2026,9,18), e:dayOffset(2026,9,20) },
+  { type:"milestone", label:"Playable Game (Polish) — core loop functional", d:dayOffset(2026,9,20) },
+  { type:"bar", label:"Demo prep & feedback collection", color:"var(--gold)", s:dayOffset(2026,9,20), e:dayOffset(2026,9,31) },
+  { type:"milestone", label:"Key checkpoint / review (Oct 31)", d:dayOffset(2026,9,31) },
+
+  { type:"head", label:"Phase 2 — Full Dungeon Mode" },
+  { type:"bar", label:"Map structure, shop/rest stop, ending logic (coders)", color:"var(--teal)", s:dayOffset(2026,10,1), e:dayOffset(2026,10,29) },
+  { type:"bar", label:"Content scaling: events, riddles, blessings, affinity (designers)", color:"var(--teal)", s:dayOffset(2026,10,1), e:dayOffset(2026,10,29) },
+  { type:"bar", label:"Art: remaining portraits & environments", color:"var(--teal)", s:dayOffset(2026,10,1), e:dayOffset(2026,10,29) },
+  { type:"bar", label:"Sound: full ambient/combat/divine sets", color:"var(--teal)", s:dayOffset(2026,10,1), e:dayOffset(2026,10,29) },
+  { type:"bar", label:"Testing & balancing", color:"var(--teal)", s:dayOffset(2026,10,30), e:dayOffset(2026,11,6) },
+
+  { type:"head", label:"Phase 3 — Story Mode Kickoff" },
+  { type:"bar", label:"Chapter scripting & chapter-select UI", color:"var(--violet)", s:dayOffset(2026,11,7), e:dayOffset(2026,11,19) },
+  { type:"bar", label:"Final polish & wrap-up", color:"var(--violet)", s:dayOffset(2026,11,20), e:dayOffset(2026,11,23) },
+];
+
+const container = document.getElementById("gantt");
+
+// header
+const header = document.createElement("div");
+header.className = "chart-header";
+const labelHead = document.createElement("div");
+labelHead.className = "label-col";
+labelHead.textContent = "Task";
+header.appendChild(labelHead);
+
+const timelineHeader = document.createElement("div");
+timelineHeader.className = "timeline-header";
+timelineHeader.style.width = chartWidth + "px";
+
+// month bands
+let cursor = new Date(START);
+while (cursor <= END) {
+  const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+  const nextMonth = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1);
+  const bandStart = cursor > monthStart ? cursor : monthStart;
+  const bandEnd = nextMonth < END ? nextMonth : new Date(END.getTime()+86400000);
+  const offsetStart = Math.max(0, Math.round((bandStart-START)/86400000));
+  const offsetEnd = Math.round((bandEnd-START)/86400000);
+  const band = document.createElement("div");
+  band.className = "month-band";
+  band.style.left = (offsetStart*PX_PER_DAY) + "px";
+  band.style.width = ((offsetEnd-offsetStart)*PX_PER_DAY) + "px";
+  band.textContent = cursor.toLocaleString('en-US',{month:'short', year:'numeric'});
+  timelineHeader.appendChild(band);
+  cursor = nextMonth;
+}
+
+// week ticks
+for (let i = 0; i <= totalDays; i += 7) {
+  const tick = document.createElement("div");
+  tick.className = "week-tick";
+  tick.style.left = (i*PX_PER_DAY) + "px";
+  const dt = new Date(START.getTime() + i*86400000);
+  tick.textContent = dt.toLocaleString('en-US',{month:'numeric', day:'numeric'});
+  timelineHeader.appendChild(tick);
+}
+header.appendChild(timelineHeader);
+container.appendChild(header);
+
+// key date vertical line (Oct 31) drawn across all rows via container-level overlay
+const bodyWrap = document.createElement("div");
+bodyWrap.style.position = "relative";
+
+rows.forEach(r => {
+  const row = document.createElement("div");
+  row.className = "body-row" + (r.type === "head" ? " phase-head" : "");
+  const label = document.createElement("div");
+  label.className = "row-label";
+  label.textContent = r.label;
+  row.appendChild(label);
+
+  const track = document.createElement("div");
+  track.className = "row-track";
+  track.style.width = chartWidth + "px";
+
+  // weekend shading + gridlines
+  for (let i = 0; i <= totalDays; i++) {
+    const dt = new Date(START.getTime() + i*86400000);
+    const isWeekend = dt.getDay() === 0 || dt.getDay() === 6;
+    if (i % 7 === 0 || isWeekend) {
+      const col = document.createElement("div");
+      col.className = "grid-col" + (isWeekend ? " weekend" : "");
+      col.style.left = (i*PX_PER_DAY) + "px";
+      col.style.width = PX_PER_DAY + "px";
+      track.appendChild(col);
+    }
+  }
+
+  if (r.type === "bar") {
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    bar.style.left = (r.s*PX_PER_DAY) + "px";
+    bar.style.width = Math.max((r.e-r.s)*PX_PER_DAY, 16) + "px";
+    bar.style.background = r.color;
+    bar.textContent = r.label;
+    track.appendChild(bar);
+  } else if (r.type === "milestone") {
+    const m = document.createElement("div");
+    m.className = "milestone";
+    m.style.left = (r.d*PX_PER_DAY) + "px";
+    track.appendChild(m);
+    const lbl = document.createElement("div");
+    lbl.className = "milestone-label";
+    lbl.style.left = (r.d*PX_PER_DAY) + "px";
+    lbl.textContent = r.label;
+    track.appendChild(lbl);
+  }
+
+  row.appendChild(track);
+  bodyWrap.appendChild(row);
+});
+
+container.appendChild(bodyWrap);
+</script>
+
+</body>
+</html>
