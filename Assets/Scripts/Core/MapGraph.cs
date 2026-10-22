@@ -38,9 +38,10 @@ namespace Oddyseus.Core
         public int LayerCount { get { return Layers.Count; } }
         public int EndId { get { return Layers[Layers.Count - 1][0]; } }
 
-        // Satu peta gabungan, 7 kolom: Act 1 (kolom 0-3) dan Act 2 (kolom 4-6) menyambung lewat satu
-        // node Shop/Rest di tengah (HubLayer), lalu berakhir di Boss.
-        public const int HubLayer = 3;
+        // Satu peta gabungan, 9 kolom: Act 1 (kolom 0-4) dan Act 2 (kolom 5-8) menyambung lewat satu
+        // node Shop/Rest di tengah (HubLayer), lalu berakhir di Boss. Ubah daftar di bawah untuk
+        // memperpanjang atau memperpendek peta; HubLayer harus menunjuk kolom Shop/Rest.
+        public const int HubLayer = 4;
 
         public static MapGraph Combined(int seed, float godRealmChance)
         {
@@ -48,9 +49,11 @@ namespace Oddyseus.Core
             {
                 new LayerSpec(1, 1, NodeType.Battle),
                 new LayerSpec(2, 3, NodeType.Random),
+                new LayerSpec(2, 4, NodeType.Random),
                 new LayerSpec(2, 3, NodeType.Random),
-                new LayerSpec(1, 1, NodeType.Shop, true),   // batas Act 1 dan Act 2
+                new LayerSpec(1, 1, NodeType.Shop, true),   // batas Act 1 dan Act 2 (HubLayer)
                 new LayerSpec(2, 3, NodeType.Random),
+                new LayerSpec(2, 4, NodeType.Random),
                 new LayerSpec(2, 3, NodeType.Random),
                 new LayerSpec(1, 1, NodeType.Boss),
             }, godRealmChance);
