@@ -35,6 +35,7 @@ namespace Oddyseus.UI
     {
         static Font font;
         static Sprite circle;
+        static Sprite rounded;
 
         public static Font DefaultFont
         {
@@ -83,17 +84,43 @@ namespace Oddyseus.UI
             }
         }
 
+        // Sprite persegi bersudut membulat (9-slice), dibuat lewat kode.
+        public static Sprite RoundedSprite
+        {
+            get
+            {
+                if (rounded == null)
+                {
+                    const int n = 32;
+                    const float rad = 10f;
+                    var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+                    tex.wrapMode = TextureWrapMode.Clamp;
+                    tex.filterMode = FilterMode.Bilinear;
+                    var px = new Color32[n * n];
+                    for (int y = 0; y < n; y++)
+                    {
+                        for (int x = 0; x < n; x++)
+                        {
+                            var p = new Vector2(x + 0.5f, y + 0.5f);
+                            var c = new Vector2(Mathf.Clamp(p.x, rad, n - rad), Mathf.Clamp(p.y, rad, n - rad));
+                            float a = Mathf.Clamp01(rad - Vector2.Distance(p, c) + 0.5f);
+                            px[y * n + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+                        }
+                    }
+                    tex.SetPixels32(px);
+                    tex.Apply();
+                    rounded = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f,
+                                            0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));
+                }
+                return rounded;
+            }
+        }
+
+        // Pakai GameInput milik tim: ia memasang InputSystemUIInputModule DAN memanggil AssignDefaultActions().
+        // Tanpa AssignDefaultActions, tombol tidak merespons di build (project ini memakai Input System baru).
         public static void EnsureEventSystem()
         {
-            if (EventSystem.current != null) return;
-            var go = new GameObject("EventSystem");
-            go.AddComponent<EventSystem>();
-            Type t = null;
-#if ENABLE_INPUT_SYSTEM
-            t = Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
-#endif
-            if (t != null) go.AddComponent(t);
-            else go.AddComponent<StandaloneInputModule>();
+            GameInput.EnsureEventSystem();
         }
 
         public static RectTransform CreateCanvas(string name)
@@ -142,6 +169,13 @@ namespace Oddyseus.UI
             Stretch(rt, x0, y0, x1, y1);
             var img = rt.gameObject.AddComponent<Image>();
             img.color = color;
+            // Latar layar penuh serta bar/isi bar tetap persegi.
+            bool full = x0 <= 0f && y0 <= 0f && x1 >= 1f && y1 >= 1f;
+            if (!full && name != "Bar" && name != "Fill")
+            {
+                img.sprite = RoundedSprite;
+                img.type = Image.Type.Sliced;
+            }
             if (border) AddBorder(img);
             return img;
         }
@@ -179,6 +213,7 @@ namespace Oddyseus.UI
             var img = Panel(parent, name, fill, x0, y0, x1, y1, true);
             var b = img.gameObject.AddComponent<Button>();
             b.targetGraphic = img;
+            img.gameObject.AddComponent<ButtonFx>();
             var cb = b.colors;
             cb.highlightedColor = new Color(0.92f, 0.96f, 1f, 1f);
             cb.pressedColor = new Color(0.78f, 0.82f, 0.9f, 1f);

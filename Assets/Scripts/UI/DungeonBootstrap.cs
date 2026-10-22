@@ -19,10 +19,18 @@ namespace Oddyseus.UI
             if (s.name != GameScenes.Dungeon) return;
             if (Object.FindAnyObjectByType<DungeonController>() != null) return;
 
-            foreach (var ph in Object.FindObjectsByType<ScenePlaceholder>(FindObjectsSortMode.None))
-                ph.gameObject.SetActive(false);
-            foreach (var c in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
-                c.gameObject.SetActive(false);
+            // PENTING: hanya sentuh objek di scene Dungeon itu sendiri (s).
+            // Jangan pakai FindObjectsByType<Canvas>() global: itu ikut menemukan Canvas milik
+            // SceneFader (DontDestroyOnLoad). Mematikannya menghentikan coroutine fade dan membuat
+            // SceneFader.loading macet true, sehingga SceneFader.LoadScene() berikutnya (Exit / akhir run)
+            // diam-diam tidak melakukan apa pun.
+            foreach (var root in s.GetRootGameObjects())
+            {
+                foreach (var ph in root.GetComponentsInChildren<ScenePlaceholder>(true))
+                    ph.enabled = false;
+                foreach (var c in root.GetComponentsInChildren<Canvas>(true))
+                    c.gameObject.SetActive(false);
+            }
 
             new GameObject("DungeonController").AddComponent<DungeonController>();
         }

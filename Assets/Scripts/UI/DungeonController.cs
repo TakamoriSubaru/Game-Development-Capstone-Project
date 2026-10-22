@@ -50,15 +50,16 @@ namespace Oddyseus.UI
         void Build()
         {
             canvas = UIFactory.CreateCanvas("DungeonCanvas");
-            UIFactory.Panel(canvas, "Bg", Theme.Bg, 0f, 0f, 1f, 1f, false);
+            UIFactory.Panel(canvas, "Bg", HubTheme.Night, 0f, 0f, 1f, 1f, false);
 
-            // Top bar 2 baris: [Party] | Men Food | [Gear] / slot equipment | buff | Map
+            // Top bar 2 baris: [Party] | Men Food | [Gear] / equipment | blessing | Floor
             topBar = TopBarView.Create(canvas);
             topBar.PartyClicked += () => OnTab(Tab.Party);
             topBar.SettingsClicked += ShowSettings;
 
             // Area utama: mulai tepat di bawah top bar.
-            var frame = UIFactory.Panel(canvas, "Area", Theme.Panel, 0.03f, 0.03f, 0.97f, 1f, true);
+            var frame = UIFactory.Panel(canvas, "Area", HubTheme.Night, 0.03f, 0.03f, 0.97f, 1f, true);
+            HubTheme.Frame(frame, HubTheme.Bronze);
             var fr = frame.rectTransform;
             fr.offsetMax = new Vector2(fr.offsetMax.x, -(TopBarView.BarHeight + 10f));
             area = fr;
@@ -74,8 +75,17 @@ namespace Oddyseus.UI
             armoryView = new ArmoryView(); armoryView.Init(canvas, this, "Armory");
             achievementsView = new AchievementsView(); achievementsView.Init(canvas, this, "Achievements");
 
-            var toastBg = UIFactory.Panel(canvas, "Toast", Theme.Dark, 0.25f, 0.045f, 0.75f, 0.11f, false);
-            toast = UIFactory.Label(toastBg.transform, "", 22, Color.white, TextAnchor.MiddleCenter, 0.02f, 0f, 0.98f, 1f);
+            // Tombol uji (hanya Editor dan Development Build), tampil di pita bawah Hub.
+            if (Debug.isDebugBuild)
+            {
+                HubUI.Btn(hubView.Root, "DbgRelic", "DEBUG: +RELIC", null, HubTheme.Panel, HubTheme.Muted,
+                          0.02f, 0.008f, 0.19f, 0.052f, DebugAddRelic, 14);
+                HubUI.Btn(hubView.Root, "DbgBless", "DEBUG: +BLESSING", null, HubTheme.Panel, HubTheme.Muted,
+                          0.20f, 0.008f, 0.40f, 0.052f, DebugAddBlessing, 14);
+            }
+
+            var toastBg = HubUI.Card(canvas, "Toast", HubTheme.Deep, 0.25f, 0.045f, 0.75f, 0.11f, HubTheme.Gold);
+            toast = UIFactory.Label(toastBg.transform, "", 22, HubTheme.Marble, TextAnchor.MiddleCenter, 0.02f, 0f, 0.98f, 1f);
             toastBox = toastBg.gameObject;
             toastBox.SetActive(false);
 
@@ -116,6 +126,25 @@ namespace Oddyseus.UI
             v.Show(false);
         }
 
+        // ---------- Uji ----------
+
+        void DebugAddRelic()
+        {
+            int n = DungeonState.Equipment.Count + 1;
+            DungeonState.AddRelic(new Relic { Name = "Relic " + n, Description = "Debug", IsGod = false });
+            RefreshTopBar();
+            Toast("Debug: equipment ditambah (" + n + ").");
+        }
+
+        void DebugAddBlessing()
+        {
+            string[] gods = { "Apollo", "Athena", "Ares", "Hephaestus", "Artemis", "Demeter", "Hermes", "Zeus" };
+            string g = gods[DungeonState.God.Count % gods.Length];
+            DungeonState.AddRelic(new Relic { Name = g, Description = "Debug", IsGod = true });
+            RefreshTopBar();
+            Toast("Debug: Blessing " + g + " (" + DungeonState.BlessingBattles + " battle).");
+        }
+
         // ---------- Achievement ----------
 
         void CheckAchievements() { Announce(AchievementCatalog.CheckUnlocks()); }
@@ -135,14 +164,21 @@ namespace Oddyseus.UI
             CheckAchievements();
         }
 
-        // Isi top bar. Hanya yang sudah pasti ada di DungeonState yang disambungkan.
+        // Top bar: Floor, Men, Food, equipment, dan Blessing (dengan sisa battle) dari status run.
         void RefreshTopBar()
         {
             topBar.SetMap(DungeonState.Floor, DungeonState.Floors);
-            // TODO (butuh DungeonState.cs, EquipmentView.cs, ResourceView.cs):
-            // topBar.SetResources(men, food);
-            // topBar.SetEquipment(namaItem);
-            // topBar.SetBuffs(namaBuff);
+            topBar.SetResources(RunState.Men, RunState.Food);
+
+            var eq = new List<string>();
+            for (int i = 0; i < DungeonState.Equipment.Count; i++)
+                if (DungeonState.Equipment[i] != null) eq.Add(DungeonState.Equipment[i].Name);
+            topBar.SetEquipment(eq);
+
+            var gods = new List<string>();
+            for (int i = 0; i < DungeonState.God.Count; i++)
+                if (DungeonState.God[i] != null) gods.Add(DungeonState.God[i].Name + "\n" + DungeonState.God[i].BattlesLeft);
+            topBar.SetBuffs(gods);
         }
 
         // ---------- Tab ----------
@@ -206,10 +242,22 @@ namespace Oddyseus.UI
 
         void AfterNode(NodeType type)
         {
-            // Sementara boss dihitung kalah saat Continue ditekan; pindahkan ke hasil battle setelah BattleSystem tersambung.
+            // Sementara battle dianggap selesai saat Continue ditekan; pindahkan ke hasil battle setelah BattleSystem tersambung.
             if (type == NodeType.GodRealm) MetaProgress.Add("stat.godRealms");
             if (type == NodeType.Boss && DungeonState.CurrentPack != null) MetaProgress.MarkPackCleared(DungeonState.CurrentPack.Id);
-            CheckAchievements();
+
+            string expiredMsg = null;
+            if (type == NodeType.Battle || type == NodeType.Elite || type == NodeType.Boss)
+            {
+                var gone = DungeonState.TickBlessings();
+                if (gone.Count > 0) expiredMsg = "Blessing faded: " + string.Join(", ", gone.ToArray());
+            }
+
+            var fresh = AchievementCatalog.CheckUnlocks();
+            RefreshTopBar();
+            if (expiredMsg != null && fresh.Count > 0) Toast(expiredMsg + "  |  Achievement: " + fresh[0].Name);
+            else if (expiredMsg != null) Toast(expiredMsg);
+            else Announce(fresh);
 
             if (DungeonState.AtActEnd) { ActEnd(); return; }
             mapView.Refresh();
@@ -260,21 +308,25 @@ namespace Oddyseus.UI
             return modalLayer;
         }
 
+        // Tombol terakhir = aksi utama (emas); tombol lain (mis. Cancel) bergaya sekunder.
         public void ShowModal(string title, string body, string[] labels, Action[] actions)
         {
             var layer = OpenModalLayer();
-            var box = UIFactory.Panel(layer, "Box", Theme.Dark, 0.27f, 0.28f, 0.73f, 0.72f, false);
+            var box = HubUI.Card(layer, "Box", HubTheme.Deep, 0.27f, 0.26f, 0.73f, 0.74f, HubTheme.Bronze);
             UIEffects.PopIn(box);
-            UIFactory.Label(box.transform, title, 32, Color.white, TextAnchor.MiddleCenter, 0.05f, 0.78f, 0.95f, 0.96f);
-            UIFactory.Label(box.transform, body, 22, new Color(0.9f, 0.9f, 0.9f), TextAnchor.UpperLeft, 0.06f, 0.30f, 0.94f, 0.78f);
+            UIFactory.Label(box.transform, title, 30, HubTheme.Marble, TextAnchor.MiddleLeft, 0.06f, 0.80f, 0.94f, 0.96f);
+            HubUI.Flat(box.transform, "Divider", HubTheme.Bronze, 0.06f, 0.785f, 0.94f, 0.792f);
+            UIFactory.Label(box.transform, body, 20, HubTheme.Marble, TextAnchor.UpperLeft, 0.06f, 0.30f, 0.94f, 0.76f);
             int n = labels.Length;
             for (int i = 0; i < n; i++)
             {
                 int k = i;
+                bool primary = i == n - 1;
                 float w = 0.9f / n;
                 float x0 = 0.05f + i * w + 0.01f, x1 = 0.05f + (i + 1) * w - 0.01f;
-                UIFactory.Btn(box.transform, "Btn" + i, labels[i], Theme.Highlight, Theme.Ink, x0, 0.06f, x1, 0.24f,
-                    () => { CloseModal(); if (actions[k] != null) actions[k](); }, 24);
+                HubUI.Btn(box.transform, "Btn" + i, labels[i], null,
+                          primary ? HubTheme.Gold : HubTheme.Panel, primary ? HubTheme.Night : HubTheme.Marble,
+                          x0, 0.06f, x1, 0.24f, () => { CloseModal(); if (actions[k] != null) actions[k](); }, 24);
             }
         }
 
@@ -283,22 +335,39 @@ namespace Oddyseus.UI
         void ShowSettings()
         {
             var layer = OpenModalLayer();
-            var box = UIFactory.Panel(layer, "Box", Theme.Dark, 0.25f, 0.30f, 0.75f, 0.70f, false);
+            var box = HubUI.Card(layer, "Box", HubTheme.Deep, 0.24f, 0.16f, 0.76f, 0.84f, HubTheme.Bronze);
             UIEffects.PopIn(box);
-            Color yellow = Theme.Highlight;
-            UIFactory.Btn(box.transform, "Restart", "RESTART\nMap", yellow, Theme.Ink, 0.06f, 0.38f, 0.32f, 0.88f, ConfirmRestart, 22);
-            UIFactory.Btn(box.transform, "Reset", "RESET\nDungeon", yellow, Theme.Ink, 0.37f, 0.38f, 0.63f, 0.88f, ConfirmReset, 22);
-            UIFactory.Btn(box.transform, "Exit", "EXIT\nMain Menu", yellow, Theme.Ink, 0.68f, 0.38f, 0.94f, 0.88f, ExitToMenu, 22);
+            var t = box.transform;
 
-            UIFactory.Label(box.transform, "Music", 18, Color.white, TextAnchor.MiddleLeft, 0.06f, 0.20f, 0.22f, 0.32f);
-            UIFactory.MakeSlider(box.transform, "MusicSlider", 0.24f, 0.20f, 0.94f, 0.32f, PlayerPrefs.GetFloat("music", 0.7f),
-                v => { PlayerPrefs.SetFloat("music", v); AudioListener.volume = v; });
-            UIFactory.Label(box.transform, "SFX", 18, Color.white, TextAnchor.MiddleLeft, 0.06f, 0.05f, 0.22f, 0.17f);
-            UIFactory.MakeSlider(box.transform, "SfxSlider", 0.24f, 0.05f, 0.94f, 0.17f, PlayerPrefs.GetFloat("sfx", 0.7f),
-                v => PlayerPrefs.SetFloat("sfx", v));
+            UIFactory.Label(t, "SETTINGS", 30, HubTheme.Marble, TextAnchor.MiddleLeft, 0.05f, 0.86f, 0.70f, 0.97f);
+            HubUI.Btn(t, "Close", "X", null, HubTheme.Danger, Color.white, 0.90f, 0.87f, 0.97f, 0.96f, CloseModal, 20);
+            HubUI.Flat(t, "Divider", HubTheme.Bronze, 0.05f, 0.845f, 0.95f, 0.852f);
 
-            var close = UIFactory.Btn(layer, "Close", "X", Theme.Bad, Color.white, 0.735f, 0.67f, 0.77f, 0.73f, CloseModal, 22);
-            close.transform.SetAsLastSibling();
+            UIFactory.Label(t, "RUN", 14, HubTheme.Gold, TextAnchor.MiddleLeft, 0.05f, 0.77f, 0.50f, 0.83f);
+            HubUI.Btn(t, "Restart", "RESTART MAP", "Back to the first node", HubTheme.Panel, HubTheme.Marble,
+                      0.05f, 0.47f, 0.35f, 0.75f, ConfirmRestart, 20);
+            HubUI.Btn(t, "Reset", "RESET DUNGEON", "Start the run over", HubTheme.Panel, HubTheme.Marble,
+                      0.36f, 0.47f, 0.64f, 0.75f, ConfirmReset, 20);
+            HubUI.Btn(t, "Exit", "EXIT", "Back to the Lobby", HubTheme.Panel, HubTheme.Marble,
+                      0.65f, 0.47f, 0.95f, 0.75f, ExitToMenu, 20);
+
+            UIFactory.Label(t, "AUDIO", 14, HubTheme.Gold, TextAnchor.MiddleLeft, 0.05f, 0.38f, 0.50f, 0.44f);
+            VolumeRow(t, "Music", "music", 0.25f, 0.35f, true);
+            VolumeRow(t, "SFX", "sfx", 0.10f, 0.20f, false);
+        }
+
+        void VolumeRow(Transform parent, string label, string key, float y0, float y1, bool master)
+        {
+            UIFactory.Label(parent, label, 20, HubTheme.Marble, TextAnchor.MiddleLeft, 0.05f, y0, 0.20f, y1);
+            var pct = UIFactory.Label(parent, "", 18, HubTheme.Gold, TextAnchor.MiddleRight, 0.86f, y0, 0.95f, y1);
+            float v = PlayerPrefs.GetFloat(key, 0.7f);
+            pct.text = Mathf.RoundToInt(v * 100f) + "%";
+            UIFactory.MakeSlider(parent, label + "Slider", 0.22f, y0, 0.85f, y1, v, val =>
+            {
+                PlayerPrefs.SetFloat(key, val);
+                if (master) AudioListener.volume = val;
+                pct.text = Mathf.RoundToInt(val * 100f) + "%";
+            });
         }
 
         void ConfirmRestart()

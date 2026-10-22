@@ -7,7 +7,8 @@ namespace Oddyseus.Core
     {
         public string Name;
         public string Description;
-        public bool IsGod;          // true = Blessing dewa (3 slot), false = equipment (7 slot)
+        public bool IsGod;          // true = Blessing dewa (hangus setelah beberapa battle), false = equipment (permanen)
+        public int BattlesLeft;     // hanya Blessing: sisa battle sebelum hangus
     }
 
     public enum ActEndResult { NextAct, NextFloor, RunComplete }
@@ -18,22 +19,27 @@ namespace Oddyseus.Core
     {
         public const int Floors = 4;
         public const int MapChoices = 3;
-        public const int EquipSlots = 7;
-        public const int GodSlots = 3;
+        public const int EquipSlots = 7;             // dipertahankan agar kode lama tetap compile; BUKAN batas lagi
+        public const int GodSlots = 3;               // idem
+        public const int BlessingBattles = 3;        // Blessing hangus setelah sekian battle (ubah ke 2 kalau mau lebih singkat)
         public const int PartyMax = RunState.PartySize;
         public const int FoodCap = 12;               // ASUMSI dari doc Mekanik Food dan Men
 
         public static bool Active;
         public static int Seed;
         public static int Floor = 1;
-        public static int Act = 1;
+        // Act dihitung dari posisi di peta gabungan (Act 1 sampai node Shop/Rest tengah, lalu Act 2).
+        public static int Act
+        {
+            get { return Graph != null && CurrentNode >= 0 ? MapGraph.ActOfLayer(Graph.Nodes[CurrentNode].Layer) : 1; }
+        }
         public static List<PackInfo> Offered = new List<PackInfo>();
         public static PackInfo CurrentPack;
         public static MapGraph Graph;
         public static int CurrentNode = -1;          // -1 = belum masuk node apa pun
         public static List<int> Party = new List<int>();
-        public static Relic[] Equipment = new Relic[EquipSlots];
-        public static Relic[] God = new Relic[GodSlots];
+        public static List<Relic> Equipment = new List<Relic>();   // tanpa batas
+        public static List<Relic> God = new List<Relic>();         // Blessing aktif, tanpa batas, hangus lewat TickBlessings
 
         public static bool InMap { get { return Graph != null; } }
 
@@ -41,10 +47,10 @@ namespace Oddyseus.Core
         {
             Seed = seed;
             RunState.NewRun();
-            Floor = 1; Act = 1;
+            Floor = 1;
             Graph = null; CurrentPack = null; CurrentNode = -1;
-            Equipment = new Relic[EquipSlots];
-            God = new Relic[GodSlots];
+            Equipment = new List<Relic>();
+            God = new List<Relic>();
             Party = new List<int>();
             for (int i = 0; i < RunState.Roster.Count && Party.Count < PartyMax; i++) Party.Add(i);
             OfferMaps();
@@ -72,23 +78,21 @@ namespace Oddyseus.Core
         public static void SelectMap(int index)
         {
             CurrentPack = Offered[index];
-            Act = 1;
             StartAct();
         }
 
         static void StartAct()
         {
-            int seed = Seed * 31 + Floor * 1009 + Act * 7919 + (CurrentPack != null ? CurrentPack.Id : 0);
+            int seed = Seed * 31 + Floor * 1009 + (CurrentPack != null ? CurrentPack.Id : 0);
             float god = CurrentPack != null ? CurrentPack.GodRealmChance : 0f;
-            Graph = Act == 1 ? MapGraph.Act1(seed, god) : MapGraph.Act2(seed, god);
+            Graph = MapGraph.Combined(seed, god);
             CurrentNode = -1;
         }
 
-        // Tombol Restart: ulang progres di Map ini dari node pertama (Act 1).
+        // Tombol Restart: ulang progres di Map ini dari node pertama.
         public static void RestartMap()
         {
             if (CurrentPack == null) return;
-            Act = 1;
             StartAct();
         }
 
@@ -118,7 +122,7 @@ namespace Oddyseus.Core
             var node = Graph.Nodes[id];
             if (node.Type == NodeType.Random)
             {
-                var rng = new Random(Seed * 17 + id * 131 + Floor * 7 + Act);
+                var rng = new Random(Seed * 17 + id * 131 + Floor * 7);
                 int roll = rng.Next(100);
                 node.Type = roll < 35 ? NodeType.Battle : roll < 60 ? NodeType.Event
                           : roll < 80 ? NodeType.Resource : roll < 90 ? NodeType.Shop : NodeType.Elite;
@@ -136,16 +140,9 @@ namespace Oddyseus.Core
 
         public static ActEndResult FinishAct()
         {
-            if (Act == 1)
-            {
-                Act = 2;
-                StartAct();
-                return ActEndResult.NextAct;
-            }
             Floor++;
             Graph = null; CurrentPack = null; CurrentNode = -1;
             if (Floor > Floors) return ActEndResult.RunComplete;
-            Act = 1;
             OfferMaps();
             return ActEndResult.NextFloor;
         }
@@ -180,12 +177,34 @@ namespace Oddyseus.Core
 
         // ---------- Relic ----------
 
+        // Tanpa batas slot. Blessing otomatis diberi masa berlaku BlessingBattles kalau belum diisi.
         public static bool AddRelic(Relic r)
         {
-            var slots = r.IsGod ? God : Equipment;
-            for (int i = 0; i < slots.Length; i++)
-                if (slots[i] == null) { slots[i] = r; return true; }
-            return false;
+            if (r == null) return false;
+            if (r.IsGod)
+            {
+                if (r.BattlesLeft <= 0) r.BattlesLeft = BlessingBattles;
+                God.Add(r);
+            }
+            else Equipment.Add(r);
+            return true;
+        }
+
+        // Panggil setiap selesai satu battle. Mengurangi sisa Blessing dan membuang yang habis.
+        // Mengembalikan nama Blessing yang baru hangus.
+        public static List<string> TickBlessings()
+        {
+            var expired = new List<string>();
+            for (int i = God.Count - 1; i >= 0; i--)
+            {
+                God[i].BattlesLeft--;
+                if (God[i].BattlesLeft <= 0)
+                {
+                    expired.Insert(0, God[i].Name);
+                    God.RemoveAt(i);
+                }
+            }
+            return expired;
         }
     }
 }
