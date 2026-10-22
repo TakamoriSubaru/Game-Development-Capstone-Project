@@ -38,31 +38,26 @@ namespace Oddyseus.Core
         public int LayerCount { get { return Layers.Count; } }
         public int EndId { get { return Layers[Layers.Count - 1][0]; } }
 
-        // Act 1 (wireframe): Battle di awal, 3 kolom Random, Shop di akhir.
-        public static MapGraph Act1(int seed, float godRealmChance)
+        // Satu peta gabungan, 7 kolom: Act 1 (kolom 0-3) dan Act 2 (kolom 4-6) menyambung lewat satu
+        // node Shop/Rest di tengah (HubLayer), lalu berakhir di Boss.
+        public const int HubLayer = 3;
+
+        public static MapGraph Combined(int seed, float godRealmChance)
         {
             return Generate(seed, new[]
             {
                 new LayerSpec(1, 1, NodeType.Battle),
                 new LayerSpec(2, 3, NodeType.Random),
-                new LayerSpec(2, 4, NodeType.Random),
                 new LayerSpec(2, 3, NodeType.Random),
-                new LayerSpec(1, 1, NodeType.Shop),
-            }, godRealmChance);
-        }
-
-        // Act 2 (doc): Random, Random, Shop atau Rest, Boss.
-        public static MapGraph Act2(int seed, float godRealmChance)
-        {
-            return Generate(seed, new[]
-            {
+                new LayerSpec(1, 1, NodeType.Shop, true),   // batas Act 1 dan Act 2
                 new LayerSpec(2, 3, NodeType.Random),
-                new LayerSpec(2, 4, NodeType.Random),
                 new LayerSpec(2, 3, NodeType.Random),
-                new LayerSpec(1, 1, NodeType.Shop, true),
                 new LayerSpec(1, 1, NodeType.Boss),
             }, godRealmChance);
         }
+
+        // Act dari sebuah kolom: kolom 0..HubLayer = Act 1, sisanya Act 2.
+        public static int ActOfLayer(int layer) { return layer <= HubLayer ? 1 : 2; }
 
         public static MapGraph Generate(int seed, LayerSpec[] specs, float godRealmChance)
         {

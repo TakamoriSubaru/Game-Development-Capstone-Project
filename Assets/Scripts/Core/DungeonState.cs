@@ -26,7 +26,11 @@ namespace Oddyseus.Core
         public static bool Active;
         public static int Seed;
         public static int Floor = 1;
-        public static int Act = 1;
+        // Act dihitung dari posisi di peta gabungan (Act 1 sampai node Shop/Rest tengah, lalu Act 2).
+        public static int Act
+        {
+            get { return Graph != null && CurrentNode >= 0 ? MapGraph.ActOfLayer(Graph.Nodes[CurrentNode].Layer) : 1; }
+        }
         public static List<PackInfo> Offered = new List<PackInfo>();
         public static PackInfo CurrentPack;
         public static MapGraph Graph;
@@ -41,7 +45,7 @@ namespace Oddyseus.Core
         {
             Seed = seed;
             RunState.NewRun();
-            Floor = 1; Act = 1;
+            Floor = 1;
             Graph = null; CurrentPack = null; CurrentNode = -1;
             Equipment = new Relic[EquipSlots];
             God = new Relic[GodSlots];
@@ -72,23 +76,21 @@ namespace Oddyseus.Core
         public static void SelectMap(int index)
         {
             CurrentPack = Offered[index];
-            Act = 1;
             StartAct();
         }
 
         static void StartAct()
         {
-            int seed = Seed * 31 + Floor * 1009 + Act * 7919 + (CurrentPack != null ? CurrentPack.Id : 0);
+            int seed = Seed * 31 + Floor * 1009 + (CurrentPack != null ? CurrentPack.Id : 0);
             float god = CurrentPack != null ? CurrentPack.GodRealmChance : 0f;
-            Graph = Act == 1 ? MapGraph.Act1(seed, god) : MapGraph.Act2(seed, god);
+            Graph = MapGraph.Combined(seed, god);
             CurrentNode = -1;
         }
 
-        // Tombol Restart: ulang progres di Map ini dari node pertama (Act 1).
+        // Tombol Restart: ulang progres di Map ini dari node pertama.
         public static void RestartMap()
         {
             if (CurrentPack == null) return;
-            Act = 1;
             StartAct();
         }
 
@@ -118,7 +120,7 @@ namespace Oddyseus.Core
             var node = Graph.Nodes[id];
             if (node.Type == NodeType.Random)
             {
-                var rng = new Random(Seed * 17 + id * 131 + Floor * 7 + Act);
+                var rng = new Random(Seed * 17 + id * 131 + Floor * 7);
                 int roll = rng.Next(100);
                 node.Type = roll < 35 ? NodeType.Battle : roll < 60 ? NodeType.Event
                           : roll < 80 ? NodeType.Resource : roll < 90 ? NodeType.Shop : NodeType.Elite;
@@ -136,16 +138,9 @@ namespace Oddyseus.Core
 
         public static ActEndResult FinishAct()
         {
-            if (Act == 1)
-            {
-                Act = 2;
-                StartAct();
-                return ActEndResult.NextAct;
-            }
             Floor++;
             Graph = null; CurrentPack = null; CurrentNode = -1;
             if (Floor > Floors) return ActEndResult.RunComplete;
-            Act = 1;
             OfferMaps();
             return ActEndResult.NextFloor;
         }
