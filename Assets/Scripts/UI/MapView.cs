@@ -81,6 +81,12 @@ namespace Oddyseus.UI
             float margin = 70f;
             float x = margin + n.Layer * (W - 2f * margin) / Mathf.Max(1, g.LayerCount - 1);
             float y = H - H * (n.Row + 1) / (n.RowCount + 1);
+            if (g.LaneCount > 0)
+            {
+                // papan jalur tetap: Boss di tengah, node lain sesuai jalurnya
+                float lane = n.Layer == g.LayerCount - 1 ? (g.LaneCount - 1) / 2f : n.Lane;
+                y = H - 60f - lane * (H - 120f) / (g.LaneCount - 1);
+            }
             bool edge = n.Layer == 0 || n.Layer == g.LayerCount - 1;
             if (!edge)
             {
