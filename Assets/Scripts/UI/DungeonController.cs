@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -6,19 +7,23 @@ using Oddyseus.Core;
 
 namespace Oddyseus.UI
 {
+    // Nilai Equipment dan Resource dipertahankan agar kode lain (view) yang memakainya tetap compile.
     public enum Tab { Home, Equipment, Resource, Party }
 
     // Pasang di satu GameObject kosong di scene Dungeon.
-    // Mengatur bar atas (tab), layar-layar (pilih map, peta, party, equipment, resource), pop-up, dan pengaturan.
+    // Mengatur Hub dan layar turunannya, top bar permanen, layar-layar run (pilih map, peta, party), pop-up, dan pengaturan.
     public class DungeonController : MonoBehaviour
     {
         RectTransform canvas, area, modalLayer;
-        Button equipBtn, resBtn, partyBtn;
+        TopBarView topBar;
+        HubView hubView;
+        LegendsView legendsView;
+        CompendiumView compendiumView;
+        ArmoryView armoryView;
+        AchievementsView achievementsView;
         SelectMapView selectView;
         MapView mapView;
         PartyView partyView;
-        EquipmentView equipView;
-        ResourceView resView;
         Tab tab = Tab.Home;
         Text toast;
         GameObject toastBox;
@@ -26,10 +31,14 @@ namespace Oddyseus.UI
 
         void Awake()
         {
+            MetaProgress.SavePath = System.IO.Path.Combine(Application.persistentDataPath, "oddyseus_meta.txt");
+            MetaProgress.Load();
+
             DungeonState.EnsureDungeon();
             UIFactory.EnsureEventSystem();
             Build();
             ShowTab(Tab.Home);
+            ShowHub();
         }
 
         void Update()
@@ -43,20 +52,27 @@ namespace Oddyseus.UI
             canvas = UIFactory.CreateCanvas("DungeonCanvas");
             UIFactory.Panel(canvas, "Bg", Theme.Bg, 0f, 0f, 1f, 1f, false);
 
-            // Bar atas sesuai wireframe: Equipment, Resource, Party, Gear.
-            equipBtn = UIFactory.Btn(canvas, "EquipTab", "EQUIPMENT", Theme.Card, Theme.Ink, 0.03f, 0.90f, 0.46f, 0.98f, () => OnTab(Tab.Equipment), 26);
-            resBtn = UIFactory.Btn(canvas, "ResourceTab", "RESOURCE", Theme.Card, Theme.Ink, 0.47f, 0.90f, 0.61f, 0.98f, () => OnTab(Tab.Resource), 22);
-            partyBtn = UIFactory.Btn(canvas, "PartyTab", "PARTY", Theme.Card, Theme.Ink, 0.62f, 0.90f, 0.80f, 0.98f, () => OnTab(Tab.Party), 24);
-            UIFactory.Btn(canvas, "GearBtn", "GEAR", Theme.Card, Theme.Ink, 0.81f, 0.90f, 0.97f, 0.98f, ShowSettings, 22);
+            // Top bar 2 baris: [Party] | Men Food | [Gear] / slot equipment | buff | Map
+            topBar = TopBarView.Create(canvas);
+            topBar.PartyClicked += () => OnTab(Tab.Party);
+            topBar.SettingsClicked += ShowSettings;
 
-            var frame = UIFactory.Panel(canvas, "Area", Theme.Panel, 0.03f, 0.03f, 0.97f, 0.88f, true);
-            area = frame.rectTransform;
+            // Area utama: mulai tepat di bawah top bar.
+            var frame = UIFactory.Panel(canvas, "Area", Theme.Panel, 0.03f, 0.03f, 0.97f, 1f, true);
+            var fr = frame.rectTransform;
+            fr.offsetMax = new Vector2(fr.offsetMax.x, -(TopBarView.BarHeight + 10f));
+            area = fr;
 
             selectView = new SelectMapView(); selectView.Init(area, this, "SelectMap");
             mapView = new MapView(); mapView.Init(area, this, "Map");
             partyView = new PartyView(); partyView.Init(area, this, "Party");
-            equipView = new EquipmentView(); equipView.Init(area, this, "Equipment");
-            resView = new ResourceView(); resView.Init(area, this, "Resource");
+
+            // Hub dan layar turunannya menutupi seluruh layar; toast dan modal dibuat sesudahnya agar tetap di atas.
+            hubView = new HubView(); hubView.Init(canvas, this, "Hub");
+            legendsView = new LegendsView(); legendsView.Init(canvas, this, "Legends");
+            compendiumView = new CompendiumView(); compendiumView.Init(canvas, this, "Compendium");
+            armoryView = new ArmoryView(); armoryView.Init(canvas, this, "Armory");
+            achievementsView = new AchievementsView(); achievementsView.Init(canvas, this, "Achievements");
 
             var toastBg = UIFactory.Panel(canvas, "Toast", Theme.Dark, 0.25f, 0.045f, 0.75f, 0.11f, false);
             toast = UIFactory.Label(toastBg.transform, "", 22, Color.white, TextAnchor.MiddleCenter, 0.02f, 0f, 0.98f, 1f);
@@ -69,6 +85,66 @@ namespace Oddyseus.UI
             modalLayer.gameObject.SetActive(false);
         }
 
+        // ---------- Hub ----------
+
+        public void ShowHub()
+        {
+            hubView.Show(true);
+            UIEffects.PopIn(hubView.Root);
+        }
+
+        // Tombol Enter/Continue di Hub: tutup Hub, lanjut ke peta atau Select Map.
+        public void EnterFromHub()
+        {
+            hubView.Show(false);
+            ShowTab(Tab.Home);
+        }
+
+        public void OpenLegends() { OpenSub(legendsView); }
+        public void OpenCompendium() { OpenSub(compendiumView); }
+        public void OpenArmory() { OpenSub(armoryView); }
+        public void OpenAchievements() { OpenSub(achievementsView); }
+
+        void OpenSub(View v)
+        {
+            v.Show(true);
+            UIEffects.PopIn(v.Root);
+        }
+
+        public void CloseSub(View v)
+        {
+            v.Show(false);
+        }
+
+        // ---------- Achievement ----------
+
+        void CheckAchievements() { Announce(AchievementCatalog.CheckUnlocks()); }
+
+        public void Announce(List<Achievement> fresh)
+        {
+            if (fresh == null || fresh.Count == 0) return;
+            string msg = "Achievement unlocked: " + fresh[0].Name;
+            if (fresh.Count > 1) msg += " (+" + (fresh.Count - 1) + " more)";
+            Toast(msg);
+        }
+
+        // Pack yang ditawarkan di Select Map dianggap "ditemukan" (Pack Compendium).
+        void MarkOfferedSeen()
+        {
+            for (int i = 0; i < DungeonState.Offered.Count; i++) MetaProgress.MarkPackSeen(DungeonState.Offered[i].Id);
+            CheckAchievements();
+        }
+
+        // Isi top bar. Hanya yang sudah pasti ada di DungeonState yang disambungkan.
+        void RefreshTopBar()
+        {
+            topBar.SetMap(DungeonState.Floor, DungeonState.Floors);
+            // TODO (butuh DungeonState.cs, EquipmentView.cs, ResourceView.cs):
+            // topBar.SetResources(men, food);
+            // topBar.SetEquipment(namaItem);
+            // topBar.SetBuffs(namaBuff);
+        }
+
         // ---------- Tab ----------
 
         void OnTab(Tab t)
@@ -78,21 +154,19 @@ namespace Oddyseus.UI
 
         public void ShowTab(Tab t)
         {
+            // Equipment dan Resource sudah pindah ke top bar, bukan layar lagi.
+            if (t == Tab.Equipment || t == Tab.Resource) t = Tab.Home;
             tab = t;
             selectView.Show(false); mapView.Show(false); partyView.Show(false);
-            equipView.Show(false); resView.Show(false);
             switch (t)
             {
-                case Tab.Equipment: equipView.Show(true); break;
-                case Tab.Resource: resView.Show(true); break;
                 case Tab.Party: partyView.Show(true); break;
                 default:
-                    if (DungeonState.InMap) mapView.Show(true); else selectView.Show(true);
+                    if (DungeonState.InMap) mapView.Show(true);
+                    else { MarkOfferedSeen(); selectView.Show(true); }
                     break;
             }
-            UIFactory.SetBtnFill(equipBtn, t == Tab.Equipment ? Theme.TabActive : Theme.Card);
-            UIFactory.SetBtnFill(resBtn, t == Tab.Resource ? Theme.TabActive : Theme.Card);
-            UIFactory.SetBtnFill(partyBtn, t == Tab.Party ? Theme.TabActive : Theme.Card);
+            RefreshTopBar();
         }
 
         public void RefreshHome() { ShowTab(Tab.Home); }
@@ -102,6 +176,7 @@ namespace Oddyseus.UI
             toast.text = msg;
             toastBox.SetActive(true);
             toastBox.transform.SetAsLastSibling();
+            UIEffects.PopIn(toastBox.transform);
             toastUntil = Time.unscaledTime + 2.2f;
         }
 
@@ -121,15 +196,21 @@ namespace Oddyseus.UI
                 return;
             }
             var node = DungeonState.Enter(id);
+            var type = node.Type;
             mapView.Refresh();
             string body = NodeInfo.Desc(node.Type);
             if (node.WasRandom) body = "The ? node became: " + NodeInfo.Name(node.Type) + ".\n\n" + body;
             body += "\n\n(Placeholder: mekanik node ini belum dibuat. Tekan Continue untuk lanjut.)";
-            ShowModal(NodeInfo.Name(node.Type), body, new[] { "Continue" }, new Action[] { AfterNode });
+            ShowModal(NodeInfo.Name(node.Type), body, new[] { "Continue" }, new Action[] { () => AfterNode(type) });
         }
 
-        void AfterNode()
+        void AfterNode(NodeType type)
         {
+            // Sementara boss dihitung kalah saat Continue ditekan; pindahkan ke hasil battle setelah BattleSystem tersambung.
+            if (type == NodeType.GodRealm) MetaProgress.Add("stat.godRealms");
+            if (type == NodeType.Boss && DungeonState.CurrentPack != null) MetaProgress.MarkPackCleared(DungeonState.CurrentPack.Id);
+            CheckAchievements();
+
             if (DungeonState.AtActEnd) { ActEnd(); return; }
             mapView.Refresh();
         }
@@ -150,6 +231,8 @@ namespace Oddyseus.UI
                 default:
                     ShowModal("Dungeon complete", "You cleared all " + DungeonState.Floors + " Floors.",
                               new[] { "Main Menu" }, new Action[] { FinishRun });
+                    MetaProgress.Add("stat.runsCompleted");
+                    CheckAchievements();   // dipanggil setelah modal dibuka agar toast tampil di atasnya
                     break;
             }
         }
@@ -181,6 +264,7 @@ namespace Oddyseus.UI
         {
             var layer = OpenModalLayer();
             var box = UIFactory.Panel(layer, "Box", Theme.Dark, 0.27f, 0.28f, 0.73f, 0.72f, false);
+            UIEffects.PopIn(box);
             UIFactory.Label(box.transform, title, 32, Color.white, TextAnchor.MiddleCenter, 0.05f, 0.78f, 0.95f, 0.96f);
             UIFactory.Label(box.transform, body, 22, new Color(0.9f, 0.9f, 0.9f), TextAnchor.UpperLeft, 0.06f, 0.30f, 0.94f, 0.78f);
             int n = labels.Length;
@@ -200,6 +284,7 @@ namespace Oddyseus.UI
         {
             var layer = OpenModalLayer();
             var box = UIFactory.Panel(layer, "Box", Theme.Dark, 0.25f, 0.30f, 0.75f, 0.70f, false);
+            UIEffects.PopIn(box);
             Color yellow = Theme.Highlight;
             UIFactory.Btn(box.transform, "Restart", "RESTART\nMap", yellow, Theme.Ink, 0.06f, 0.38f, 0.32f, 0.88f, ConfirmRestart, 22);
             UIFactory.Btn(box.transform, "Reset", "RESET\nDungeon", yellow, Theme.Ink, 0.37f, 0.38f, 0.63f, 0.88f, ConfirmReset, 22);
@@ -231,7 +316,7 @@ namespace Oddyseus.UI
 
         void ExitToMenu()
         {
-            // Belum ada save ke disk: progres hanya bertahan selama aplikasi terbuka.
+            // Belum ada save run ke disk: progres run hanya bertahan selama aplikasi terbuka (progres meta tersimpan di file).
             SceneFader.LoadScene(GameScenes.Lobby);
         }
     }
