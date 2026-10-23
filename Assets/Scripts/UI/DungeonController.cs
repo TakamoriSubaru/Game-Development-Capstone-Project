@@ -24,6 +24,7 @@ namespace Oddyseus.UI
         SelectMapView selectView;
         MapView mapView;
         PartyView partyView;
+        BattleView battleView;
         Tab tab = Tab.Home;
         Text toast;
         GameObject toastBox;
@@ -67,6 +68,7 @@ namespace Oddyseus.UI
             selectView = new SelectMapView(); selectView.Init(area, this, "SelectMap");
             mapView = new MapView(); mapView.Init(area, this, "Map");
             partyView = new PartyView(); partyView.Init(area, this, "Party");
+            battleView = BattleView.Create(area, this, Toast);   // di atas view lain, di bawah toast dan modal
 
             // Hub dan layar turunannya menutupi seluruh layar; toast dan modal dibuat sesudahnya agar tetap di atas.
             hubView = new HubView(); hubView.Init(canvas, this, "Hub");
@@ -185,6 +187,7 @@ namespace Oddyseus.UI
 
         void OnTab(Tab t)
         {
+            if (battleView != null && battleView.Active) { Toast("Sedang battle."); return; }
             ShowTab(tab == t ? Tab.Home : t);
         }
 
@@ -234,17 +237,57 @@ namespace Oddyseus.UI
             var node = DungeonState.Enter(id);
             var type = node.Type;
             mapView.Refresh();
+
+            // Battle, Elite, dan Boss memakai battle sungguhan; node lain masih placeholder.
+            if (type == NodeType.Battle || type == NodeType.Elite || type == NodeType.Boss)
+            {
+                if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
+                StartBattle(type);
+                return;
+            }
+
             string body = NodeInfo.Desc(node.Type);
             if (node.WasRandom) body = "The ? node became: " + NodeInfo.Name(node.Type) + ".\n\n" + body;
             body += "\n\n(Placeholder: mekanik node ini belum dibuat. Tekan Continue untuk lanjut.)";
             ShowModal(NodeInfo.Name(node.Type), body, new[] { "Continue" }, new Action[] { () => AfterNode(type) });
         }
 
-        void AfterNode(NodeType type)
+        void StartBattle(NodeType type)
         {
-            // Sementara battle dianggap selesai saat Continue ditekan; pindahkan ke hasil battle setelah BattleSystem tersambung.
+            bool started = battleView.Begin(new List<int>(DungeonState.Party), RunState.SelectedEnv,
+                                            victory => AfterBattle(type, victory));
+            if (!started)
+            {
+                ShowModal("Run berakhir", "Tidak ada karakter yang siap bertarung (gugur atau Stamina habis).",
+                          new[] { "Main Menu" }, new Action[] { FinishRun });
+                return;
+            }
+            RefreshTopBar();   // Food sudah terpotong oleh PrepareBattle
+        }
+
+        void AfterBattle(NodeType type, bool victory)
+        {
+            RefreshTopBar();
+            if (!victory)
+            {
+                bool anyAlive = false;
+                for (int i = 0; i < RunState.Roster.Count; i++)
+                    if (RunState.Roster[i].Alive) anyAlive = true;
+                // Kalah di Boss, Men habis, atau semua karakter gugur: run berakhir.
+                if (type == NodeType.Boss || RunState.RunOver || !anyAlive)
+                {
+                    ShowModal("Run berakhir", "Party kalah dan tidak bisa melanjutkan.",
+                              new[] { "Main Menu" }, new Action[] { FinishRun });
+                    return;
+                }
+            }
+            AfterNode(type, victory);
+        }
+
+        void AfterNode(NodeType type, bool cleared = true)
+        {
             if (type == NodeType.GodRealm) MetaProgress.Add("stat.godRealms");
-            if (type == NodeType.Boss && DungeonState.CurrentPack != null) MetaProgress.MarkPackCleared(DungeonState.CurrentPack.Id);
+            if (type == NodeType.Boss && cleared && DungeonState.CurrentPack != null) MetaProgress.MarkPackCleared(DungeonState.CurrentPack.Id);
 
             string expiredMsg = null;
             if (type == NodeType.Battle || type == NodeType.Elite || type == NodeType.Boss)
@@ -374,13 +417,13 @@ namespace Oddyseus.UI
         {
             if (DungeonState.CurrentPack == null) { CloseModal(); Toast("Belum ada Map yang dipilih."); return; }
             ShowModal("Restart Map?", "Progress di Map ini kembali ke node pertama (Act 1).",
-                      new[] { "Cancel", "Restart" }, new Action[] { null, () => { DungeonState.RestartMap(); ShowTab(Tab.Home); } });
+                      new[] { "Cancel", "Restart" }, new Action[] { null, () => { battleView.Abort(); DungeonState.RestartMap(); ShowTab(Tab.Home); } });
         }
 
         void ConfirmReset()
         {
             ShowModal("Reset Dungeon?", "Seluruh run Dungeon Mode diulang dari awal (Men, Food, party, relic ikut ter-reset).",
-                      new[] { "Cancel", "Reset" }, new Action[] { null, () => { DungeonState.ResetDungeon(); ShowTab(Tab.Home); } });
+                      new[] { "Cancel", "Reset" }, new Action[] { null, () => { battleView.Abort(); DungeonState.ResetDungeon(); ShowTab(Tab.Home); } });
         }
 
         void ExitToMenu()
