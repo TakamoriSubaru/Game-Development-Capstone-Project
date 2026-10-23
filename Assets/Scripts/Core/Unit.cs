@@ -10,8 +10,12 @@ namespace Oddyseus.Core
         public bool IsEnemy;
         public int Hp;
         public bool Alive { get { return Hp > 0; } }
-        public float Av;                 // action value: makin kecil makin cepat dapat giliran
+        public bool Fled;                // musuh yang kabur: keluar dari battle tanpa hadiah
+        public bool Present { get { return Hp > 0 && !Fled; } }   // masih ikut bertarung
+        public float Av;                 // tidak dipakai lagi (initiative sekarang di-roll per ronde)
         public int RosterIndex = -1;     // indeks di RunState.Roster (khusus ally)
+        public int HealCooldown;         // giliran musuh ini yang masih terblokir untuk Heal
+        public int StolenFood, StolenGold;   // curian yang dibawa (kembali ke pemain kalau unit ini mati)
         public List<StatusEffect> Statuses = new List<StatusEffect>();
 
         public Unit(UnitData data, bool isEnemy, int hp)
