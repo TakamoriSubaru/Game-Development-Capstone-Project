@@ -246,6 +246,20 @@ namespace Oddyseus.UI
                 return;
             }
 
+            // Resource dan Rest Stop punya layar sendiri (NodeScreens). Node lain masih placeholder.
+            if (type == NodeType.Resource)
+            {
+                if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
+                NodeScreens.Resource(this, node.Id, () => AfterSimpleNode(type));
+                return;
+            }
+            if (type == NodeType.Rest || type == NodeType.Shop)
+            {
+                if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
+                NodeScreens.RestStop(this, () => AfterSimpleNode(type));
+                return;
+            }
+
             string body = NodeInfo.Desc(node.Type);
             if (node.WasRandom) body = "The ? node became: " + NodeInfo.Name(node.Type) + ".\n\n" + body;
             body += "\n\n(Placeholder: mekanik node ini belum dibuat. Tekan Continue untuk lanjut.)";
@@ -282,6 +296,19 @@ namespace Oddyseus.UI
                 }
             }
             AfterNode(type, victory);
+        }
+
+        // Setelah node Resource atau Rest Stop: Men habis berarti run berakhir, selain itu lanjut seperti biasa.
+        void AfterSimpleNode(NodeType type)
+        {
+            RefreshTopBar();
+            if (RunState.RunOver)
+            {
+                ShowModal("Run berakhir", "Men habis. Kru tidak cukup untuk mendayung.",
+                          new[] { "Main Menu" }, new Action[] { FinishRun });
+                return;
+            }
+            AfterNode(type);
         }
 
         void AfterNode(NodeType type, bool cleared = true)
