@@ -24,6 +24,7 @@ namespace Oddyseus.UI
         SelectMapView selectView;
         MapView mapView;
         PartyView partyView;
+        ShopView shopView;
         BattleView battleView;
         Tab tab = Tab.Home;
         Text toast;
@@ -68,6 +69,7 @@ namespace Oddyseus.UI
             selectView = new SelectMapView(); selectView.Init(area, this, "SelectMap");
             mapView = new MapView(); mapView.Init(area, this, "Map");
             partyView = new PartyView(); partyView.Init(area, this, "Party");
+            shopView = new ShopView(); shopView.Init(area, this, "Shop");
             battleView = BattleView.Create(area, this, Toast);   // di atas view lain, di bawah toast dan modal
 
             // Hub dan layar turunannya menutupi seluruh layar; toast dan modal dibuat sesudahnya agar tetap di atas.
@@ -188,6 +190,7 @@ namespace Oddyseus.UI
         void OnTab(Tab t)
         {
             if (battleView != null && battleView.Active) { Toast("Sedang battle."); return; }
+            if (shopView != null && shopView.Root.gameObject.activeSelf) { Toast("Selesaikan belanja dulu."); return; }
             ShowTab(tab == t ? Tab.Home : t);
         }
 
@@ -209,6 +212,12 @@ namespace Oddyseus.UI
         }
 
         public void RefreshHome() { ShowTab(Tab.Home); }
+
+        // Dipakai ShopView: perbarui Men, Food, dan equipment di top bar tanpa mengganti layar.
+        public void RefreshBars() { RefreshTopBar(); }
+
+        // Buka Shop. closed(true) kalau ada yang dibeli.
+        public void OpenShop(int seed, Action<bool> closed) { shopView.Open(seed, closed); }
 
         public void Toast(string msg)
         {
@@ -243,6 +252,20 @@ namespace Oddyseus.UI
             {
                 if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
                 StartBattle(type);
+                return;
+            }
+
+            // Resource dan Rest Stop punya layar sendiri (NodeScreens). Node lain masih placeholder.
+            if (type == NodeType.Resource)
+            {
+                if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
+                NodeScreens.Resource(this, node.Id, () => AfterSimpleNode(type));
+                return;
+            }
+            if (type == NodeType.Rest || type == NodeType.Shop)
+            {
+                if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
+                NodeScreens.RestStop(this, node.Id, () => AfterSimpleNode(type));
                 return;
             }
 
@@ -282,6 +305,19 @@ namespace Oddyseus.UI
                 }
             }
             AfterNode(type, victory);
+        }
+
+        // Setelah node Resource atau Rest Stop: Men habis berarti run berakhir, selain itu lanjut seperti biasa.
+        void AfterSimpleNode(NodeType type)
+        {
+            RefreshTopBar();
+            if (RunState.RunOver)
+            {
+                ShowModal("Run berakhir", "Men habis. Kru tidak cukup untuk mendayung.",
+                          new[] { "Main Menu" }, new Action[] { FinishRun });
+                return;
+            }
+            AfterNode(type);
         }
 
         void AfterNode(NodeType type, bool cleared = true)
