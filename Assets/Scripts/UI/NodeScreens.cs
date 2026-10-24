@@ -42,15 +42,16 @@ namespace Oddyseus.UI
                            Choices[story], actions);
         }
 
-        // Rest Stop: Rest memulihkan HP dan Stamina. Shop belum dibuat (D-10), jadi hanya memberi tahu lalu kembali ke pilihan.
-        public static void RestStop(DungeonController host, Action done)
+        // Rest Stop: pilih Rest (pulihkan HP dan Stamina) atau Shop. Keluar dari Shop tanpa membeli kembali ke pilihan ini.
+        public static void RestStop(DungeonController host, int nodeId, Action done)
         {
             host.ShowModal("Rest Stop",
-                "A quiet harbor. The crew can rest or trade.\n\nRest: restore HP and 1 Stamina.\nShop: Food, equipment and Blessings (coming soon).",
+                "A quiet harbor. The crew can rest or trade, but not both.\n\nRest: restore HP and 1 Stamina.\nShop: buy Food, boons and Blessings with Gold.",
                 new[] { "Shop", "Rest" },
                 new Action[]
                 {
-                    () => { host.Toast("Shop is not built yet. Choose Rest for now."); RestStop(host, done); },
+                    () => host.OpenShop(DungeonState.Seed * 104729 + DungeonState.Floor * 131 + nodeId,
+                                        bought => { if (bought) done(); else RestStop(host, nodeId, done); }),
                     () => host.ShowModal("Rest Stop", Oddyseus.Core.RestStop.Rest(), new[] { "Continue" }, new Action[] { done })
                 });
         }

@@ -24,6 +24,7 @@ namespace Oddyseus.UI
         SelectMapView selectView;
         MapView mapView;
         PartyView partyView;
+        ShopView shopView;
         BattleView battleView;
         Tab tab = Tab.Home;
         Text toast;
@@ -68,6 +69,7 @@ namespace Oddyseus.UI
             selectView = new SelectMapView(); selectView.Init(area, this, "SelectMap");
             mapView = new MapView(); mapView.Init(area, this, "Map");
             partyView = new PartyView(); partyView.Init(area, this, "Party");
+            shopView = new ShopView(); shopView.Init(area, this, "Shop");
             battleView = BattleView.Create(area, this, Toast);   // di atas view lain, di bawah toast dan modal
 
             // Hub dan layar turunannya menutupi seluruh layar; toast dan modal dibuat sesudahnya agar tetap di atas.
@@ -188,6 +190,7 @@ namespace Oddyseus.UI
         void OnTab(Tab t)
         {
             if (battleView != null && battleView.Active) { Toast("Sedang battle."); return; }
+            if (shopView != null && shopView.Root.gameObject.activeSelf) { Toast("Selesaikan belanja dulu."); return; }
             ShowTab(tab == t ? Tab.Home : t);
         }
 
@@ -209,6 +212,12 @@ namespace Oddyseus.UI
         }
 
         public void RefreshHome() { ShowTab(Tab.Home); }
+
+        // Dipakai ShopView: perbarui Men, Food, dan equipment di top bar tanpa mengganti layar.
+        public void RefreshBars() { RefreshTopBar(); }
+
+        // Buka Shop. closed(true) kalau ada yang dibeli.
+        public void OpenShop(int seed, Action<bool> closed) { shopView.Open(seed, closed); }
 
         public void Toast(string msg)
         {
@@ -256,7 +265,7 @@ namespace Oddyseus.UI
             if (type == NodeType.Rest || type == NodeType.Shop)
             {
                 if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
-                NodeScreens.RestStop(this, () => AfterSimpleNode(type));
+                NodeScreens.RestStop(this, node.Id, () => AfterSimpleNode(type));
                 return;
             }
 
