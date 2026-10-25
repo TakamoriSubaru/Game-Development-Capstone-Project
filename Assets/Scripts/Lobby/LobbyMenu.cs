@@ -123,18 +123,15 @@ public class LobbyMenu : MonoBehaviour
         var box = MakeBox(settingsPage, new Vector2(1000f, 640f), "SETTINGS");
         float y = -160f;
 
-        AddLabel(box, "Volume", y);
-        var slider = MakeSlider(box, GameSettings.Volume, v => GameSettings.Volume = v);
-        UIFactory.Anchor((RectTransform)slider.transform, TopRight, TopRight, TopRight, new Vector2(-60f, y), new Vector2(440f, 60f));
+        AddLabel(box, "Music", y);
+        var music = MakeSlider(box, GameSettings.MusicVolume, v => GameSettings.MusicVolume = v);
+        UIFactory.Anchor((RectTransform)music.transform, TopRight, TopRight, TopRight, new Vector2(-60f, y), new Vector2(440f, 60f));
         y -= 110f;
 
-        if (!Application.isMobilePlatform)       // phones are always fullscreen
-        {
-            AddLabel(box, "Fullscreen", y);
-            var fs = MakeSwitch(box, Screen.fullScreen, v => GameSettings.Fullscreen = v);
-            UIFactory.Anchor((RectTransform)fs.transform, TopRight, TopRight, TopRight, new Vector2(-60f, y), new Vector2(200f, 70f));
-            y -= 110f;
-        }
+        AddLabel(box, "SFX", y);
+        var sfx = MakeSlider(box, GameSettings.SfxVolume, v => GameSettings.SfxVolume = v);
+        UIFactory.Anchor((RectTransform)sfx.transform, TopRight, TopRight, TopRight, new Vector2(-60f, y), new Vector2(440f, 60f));
+        y -= 110f;
 
         AddLabel(box, "Companion chatter", y);
         var chat = MakeSwitch(box, GameSettings.CompanionChatter, v => GameSettings.CompanionChatter = v);
