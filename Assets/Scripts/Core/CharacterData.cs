@@ -7,13 +7,20 @@ public enum CharacterRole { DPS, Healer, DoTApplier, BufferDebuffer, Tank }
 public class SkillData
 {
     public readonly string name, tag, description;
+    public readonly string target;          // e.g. "1 enemy", "All allies". Empty for the Almanac placeholders.
 
-    public SkillData(string name, string tag, string description)
+    public SkillData(string name, string tag, string description) : this(name, tag, description, "") { }
+
+    public SkillData(string name, string tag, string description, string target)
     {
         this.name = name;
         this.tag = tag;
         this.description = description;
+        this.target = target;
     }
+
+    /// <summary>Stable id used by the collection screens (derived from the name).</summary>
+    public string id { get { return string.IsNullOrEmpty(name) ? "" : name.ToLowerInvariant().Replace(' ', '_'); } }
 }
 
 public class CharacterData
@@ -25,6 +32,22 @@ public class CharacterData
     public bool lobbyCompanion;             // can this character show up and chat in the lobby?
     public string[] lobbyLines;
     public SkillData[] skills;
+
+    // ---- Derived members for the Collection screens (nothing extra to maintain here) ----
+    // They read from the battle data through CollectionData, which is the only adapter.
+    /// <summary>Lower-case name, matches UnitData.Id ("odysseus", "polites", ...).</summary>
+    public string id { get { return string.IsNullOrEmpty(name) ? "" : name.ToLowerInvariant(); } }
+    public SkillData[] moves { get { return CollectionData.MovesOf(this); } }
+    public int hp { get { return CollectionData.StatOf(this, 0); } }
+    public int atk { get { return CollectionData.StatOf(this, 1); } }
+    public int def { get { return CollectionData.StatOf(this, 2); } }
+    public int spd { get { return CollectionData.StatOf(this, 3); } }
+    public string traitName { get { return CollectionData.PassiveName(this, false); } }
+    public string traitText { get { return CollectionData.PassiveText(this, false); } }
+    public string talentName { get { return CollectionData.PassiveName(this, true); } }
+    public string talentText { get { return CollectionData.PassiveText(this, true); } }
+    public int talentUnlockFloor { get { return CollectionData.TalentFloorOf(this); } }
+    public string unlockConditionText { get { return CollectionData.UnlockTextOf(this); } }
 }
 
 /// <summary>

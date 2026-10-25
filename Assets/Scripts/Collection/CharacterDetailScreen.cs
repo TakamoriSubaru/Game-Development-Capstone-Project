@@ -7,7 +7,7 @@ using TMPro;
 /// Character Detail (concept 14, variant A "Night Sea and Bronze").
 /// Left: Party list (only during a run) + Character List. Centre: portrait, role pill, stat bars,
 /// "Remove from Party" (only when opened from a run). Right: tabs Moves / Passive.
-/// Moves: 8 tiles, max 4 equipped (click toggles), details with Equip / Unequip. Saved with SaveSystem.
+/// Moves: 8 tiles, max 4 equipped (click toggles), details with Equip / Unequip. Saved by CollectionData (UnitData.Equipped in a run, MetaProgress otherwise).
 /// Open it with CollectionNav.OpenCharacterDetail(charId, fromRun, returnScene).
 /// Scene name: CollectionNav.CharacterDetailScene ("CharacterDetail").
 /// </summary>
@@ -409,7 +409,6 @@ public class CharacterDetailScreen : CollectionScreenBase
         ConfirmPanel.GetOrCreate().Show("Remove " + who + " from the party?", "Stay", "Remove", () =>
         {
             CollectionData.RemoveFromParty(id);
-            SaveSystem.Save();
             RefreshLists();
             RefreshCentre();
         });
