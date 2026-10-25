@@ -76,7 +76,7 @@ namespace Oddyseus.Core
                     int loss = (int)Math.Ceiling(c.Data.MaxHp * NoFoodHpLoss);
                     c.Hp = Math.Max(1, c.Hp - loss);   // tidak sampai gugur karena lapar
                 }
-                note = "Tanpa Food: party kehilangan 10% max HP.";
+                note = "No Food: the party loses 10% max HP.";
             }
             return note;
         }
@@ -112,7 +112,7 @@ namespace Oddyseus.Core
             if (deaths > 0)
             {
                 Men = Math.Max(0, Men - deaths * MenLostPerDeath);
-                lines.Add("Gugur: " + deaths + " (Men -" + (deaths * MenLostPerDeath) + ").");
+                lines.Add("Fallen: " + deaths + " (Men -" + (deaths * MenLostPerDeath) + ").");
             }
             if (victory)
             {
@@ -128,14 +128,14 @@ namespace Oddyseus.Core
                         int heal = (int)Math.Ceiling(c.Data.MaxHp * FoodRegen);
                         c.Hp = Math.Min(c.Data.MaxHp, c.Hp + heal);
                     }
-                    lines.Add("Food cukup: seluruh party pulih 5% max HP.");
+                    lines.Add("Enough Food: the whole party recovers 5% max HP.");
                 }
             }
             else
             {
-                lines.Add("Party kalah.");
+                lines.Add("The party was defeated.");
             }
-            if (Men <= 0) lines.Add("Men habis. Run berakhir.");
+            if (Men <= 0) lines.Add("Out of Men. The run is over.");
             return string.Join("\n", lines.ToArray());
         }
 

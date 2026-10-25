@@ -17,7 +17,7 @@ namespace Oddyseus.UI
 
         const int MoveSlots = 8;      // sel 0..7 = Move, 8 = Trait, 9 = Talent
         const int TraitSel = 8, TalentSel = 9;
-        const float MaxAtk = 40f, MaxDef = 30f, MaxSpd = 120f;   // acuan panjang bar stat
+        const float MaxAtk = 40f, MaxDef = 30f, MaxSpd = 8f;   // acuan panjang bar stat
 
         int viewIndex = -1;      // indeks roster yang sedang dilihat
         int sel = 0;             // tile yang dipilih (0..9)
@@ -290,7 +290,7 @@ namespace Oddyseus.UI
             StatRow(0, "HP", c.Hp + "/" + d.MaxHp, d.MaxHp > 0 ? (float)c.Hp / d.MaxHp : 0f, Theme.Good);
             StatRow(1, "ATK", d.Atk.ToString(), d.Atk / MaxAtk, HubTheme.Danger);
             StatRow(2, "DEF", d.Def.ToString(), d.Def / MaxDef, HubTheme.Teal);
-            StatRow(3, "SPD", d.Speed.ToString(), d.Speed / MaxSpd, HubTheme.Gold);
+            StatRow(3, "SPD", d.SpeedLabel, d.SpeedMax / MaxSpd, HubTheme.Gold);
 
             HubUI.Flat(detail, "Divider", HubTheme.Bronze, 0.325f, 0.08f, 0.330f, 0.92f);
 

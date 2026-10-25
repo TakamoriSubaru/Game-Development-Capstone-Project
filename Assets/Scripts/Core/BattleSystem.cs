@@ -29,14 +29,14 @@ namespace Oddyseus.Core
 
     // Logika battle murni (tanpa UnityEngine) supaya mudah dites.
     // Aturan:
-    //  - Initiative di-roll ulang setiap ronde (Speed + acak). Satu ronde selesai saat semua unit yang hadir sudah bertindak.
+    //  - Speed ala Limbus: tiap ronde setiap unit me-roll angka di antara SpeedMin dan SpeedMax. Tertinggi jalan duluan, seri diacak.
+    //  - Synergy (komposisi party) dan Relic (DungeonState.Equipment) memberi bonus stat sebelum Begin().
     //  - Satu giliran = satu aksi. Pemain: 4 skill ter-equip atau Blessing. Tidak ada kabur.
     //  - Musuh: Attack, Defend, Buff, Debuff, Heal, Steal (sesuai EnemyBehavior) + Kabur dan Call Reinforcements (dengan syarat).
     //  - Stalling: 2 giliran pemain berturut-turut tanpa damage ke musuh.
     // Alur: Begin() -> loop { NextActor() -> (UseSkill | UseBlessing | PerformEnemyTurn) } sampai Outcome != Ongoing.
     public class BattleSystem
     {
-        public const int InitiativeRoll = 20;            // initiative = Speed + acak 0..20
         public const float GuardCutDefault = 0.5f;
         public const int StallTurns = 2;
         public const int EnemyHealCooldown = 3;          // giliran musuh itu yang terblokir setelah Heal
@@ -52,6 +52,7 @@ namespace Oddyseus.Core
         public readonly List<Unit> All = new List<Unit>();
         public readonly List<BattleEvent> TurnStartEvents = new List<BattleEvent>();
         public readonly List<Unit> FledUnits = new List<Unit>();
+        public readonly List<SynergyInfo> ActiveSynergies = new List<SynergyInfo>();
         public BattleOutcome Outcome { get; private set; }
         public Unit Current { get; private set; }
         public int Round { get; private set; }
@@ -97,8 +98,26 @@ namespace Oddyseus.Core
             RunState.Gold = PlayerGold;
         }
 
+        // Panggil sebelum Begin(). Relic yang efeknya ada di RelicEffects memberi bonus ke semua ally.
+        public void ApplyRelics(IEnumerable<Relic> relics)
+        {
+            if (relics == null) return;
+            foreach (var r in relics)
+            {
+                if (r == null || r.IsGod) continue;
+                var mods = RelicEffects.For(r.Name);
+                for (int i = 0; i < Allies.Count; i++)
+                    for (int k = 0; k < mods.Length; k++) Allies[i].AddMod(mods[k]);
+            }
+        }
+
         public void Begin()
         {
+            ActiveSynergies.Clear();
+            ActiveSynergies.AddRange(SynergyCatalog.Resolve(Allies));
+            SynergyCatalog.Apply(Allies, ActiveSynergies);
+            for (int i = 0; i < ActiveSynergies.Count; i++) Log("Synergy: " + ActiveSynergies[i].Name + ".");
+
             Round = 0;
             pos = -1;
             StallCount = 0;
@@ -120,13 +139,13 @@ namespace Oddyseus.Core
                 Unit u = All[i];
                 if (!u.Present) continue;
                 // pecahan kecil memutus seri secara acak
-                roll[u] = u.Data.Speed + rng.Next(0, InitiativeRoll + 1) + (float)rng.NextDouble() * 0.5f;
+                roll[u] = u.RollSpeed(rng) + (float)rng.NextDouble() * 0.5f;
                 list.Add(u);
             }
             list.Sort((a, b) => roll[b].CompareTo(roll[a]));
             order = list;
             pos = -1;
-            Log("Ronde " + Round + ".");
+            Log("Round " + Round + ".");
         }
 
         // Giliran tersisa di ronde ini, termasuk unit yang sedang bertindak. Untuk daftar urutan di kiri atas.
@@ -177,7 +196,7 @@ namespace Oddyseus.Core
             {
                 int dmg = Math.Max(1, (int)Math.Round(u.MaxHp * bleed.Potency));
                 ApplyDamage(u, dmg, TurnStartEvents, EventKind.Bleed);
-                Log(u.Name + " terkena Luka: -" + dmg + " HP.");
+                Log(u.Name + " bleeds: -" + dmg + " HP.");
             }
             for (int i = u.Statuses.Count - 1; i >= 0; i--)
             {
@@ -240,11 +259,11 @@ namespace Oddyseus.Core
 
             if (skill.NeedsTargetPick && !IsValidTarget(skill, actor, chosenTarget))
             {
-                Log("Target tidak valid.");
+                Log("Invalid target.");
                 return events;
             }
 
-            Log(actor.Name + " memakai " + skill.Name + ".");
+            Log(actor.Name + " uses " + skill.Name + ".");
             var targets = ResolveTargets(skill, actor, chosenTarget);
             for (int i = 0; i < targets.Count; i++)
             {
@@ -253,12 +272,12 @@ namespace Oddyseus.Core
                 {
                     int dmg = CalcDamage(actor, t, skill.Power);
                     ApplyDamage(t, dmg, events, EventKind.Damage);
-                    Log("  " + t.Name + " -" + dmg + " HP" + (t.Alive ? "." : " dan gugur."));
+                    Log("  " + t.Name + " -" + dmg + " HP" + (t.Alive ? "." : " and falls."));
                     if (skill.HasStatus && t.Alive) AddStatusEvent(t, skill, events);
                 }
                 else if (skill.Kind == SkillKind.Heal)
                 {
-                    int heal = Math.Max(1, (int)Math.Round(actor.Data.Atk * actor.AtkMult * skill.Power));
+                    int heal = Math.Max(1, (int)Math.Round(actor.Data.Atk * actor.AtkMult * skill.Power * (1f + actor.HealBonus)));
                     int before = t.Hp;
                     t.Hp = Math.Min(t.MaxHp, t.Hp + heal);
                     int real = t.Hp - before;
@@ -282,7 +301,7 @@ namespace Oddyseus.Core
             var events = new List<BattleEvent>();
             if (Current == null || Current.IsEnemy || Outcome != BattleOutcome.Ongoing) return events;
             Unit actor = Current;
-            Log(actor.Name + " memakai Blessing.");
+            Log(actor.Name + " uses a Blessing.");
             if (effect != null)
             {
                 var r = effect(this, actor);
@@ -333,15 +352,15 @@ namespace Oddyseus.Core
             if (!t.Alive)
             {
                 t.Statuses.Clear();
-                Log(t.Name + " gugur.");
+                Log(t.Name + " falls.");
                 // Pencuri yang mati mengembalikan curiannya.
                 if (t.IsEnemy && (t.StolenFood > 0 || t.StolenGold > 0))
                 {
                     PlayerFood += t.StolenFood;
                     PlayerGold += t.StolenGold;
                     events.Add(new BattleEvent { Target = t, Kind = EventKind.Info,
-                        Text = "Curian kembali: Food " + t.StolenFood + ", Gold " + t.StolenGold });
-                    Log("  Curian kembali ke pemain.");
+                        Text = "Stolen goods returned: Food " + t.StolenFood + ", Gold " + t.StolenGold });
+                    Log("  Stolen goods returned to the party.");
                     t.StolenFood = 0;
                     t.StolenGold = 0;
                 }
@@ -486,7 +505,7 @@ namespace Oddyseus.Core
             {
                 float w = b.Flee;
                 if (alone && actor.Hp < actor.MaxHp * 0.4f) w *= 3f;
-                cands.Add(new Candidate { Weight = w, Action = new EnemyAction { Type = EnemyActionType.Flee, Label = "Kabur" } });
+                cands.Add(new Candidate { Weight = w, Action = new EnemyAction { Type = EnemyActionType.Flee, Label = "Flee" } });
             }
 
             // Call Reinforcements: hanya kalau tinggal 1 musuh (langka) atau pemain stalling (sering).
@@ -540,7 +559,7 @@ namespace Oddyseus.Core
                     if (a.Skill != null) return UseSkill(a.Skill, null);
                     actor.AddStatus(StatusType.Guard, 1, GuardCutDefault);
                     events.Add(new BattleEvent { Target = actor, Kind = EventKind.StatusApplied, Text = Unit.StatusShort(StatusType.Guard) });
-                    Log(actor.Name + " bertahan.");
+                    Log(actor.Name + " guards.");
                     break;
 
                 case EnemyActionType.Steal:
@@ -551,8 +570,8 @@ namespace Oddyseus.Core
                     actor.Fled = true;
                     actor.Statuses.Clear();
                     FledUnits.Add(actor);
-                    events.Add(new BattleEvent { Target = actor, Kind = EventKind.Info, Text = "Kabur" });
-                    Log(actor.Name + " kabur" + (actor.StolenFood + actor.StolenGold > 0 ? " membawa curiannya." : "."));
+                    events.Add(new BattleEvent { Target = actor, Kind = EventKind.Info, Text = "Fled" });
+                    Log(actor.Name + " flees" + (actor.StolenFood + actor.StolenGold > 0 ? " with the stolen goods." : "."));
                     break;
 
                 case EnemyActionType.CallReinforcements:
@@ -572,16 +591,16 @@ namespace Oddyseus.Core
                 int n = Math.Min(StealFoodAmount, PlayerFood);
                 PlayerFood -= n;
                 thief.StolenFood += n;
-                text = "Curi Food " + n;
+                text = "Steal Food " + n;
             }
             else if (canGold)
             {
                 int n = Math.Min(StealGoldAmount, PlayerGold);
                 PlayerGold -= n;
                 thief.StolenGold += n;
-                text = "Curi Gold " + n;
+                text = "Steal Gold " + n;
             }
-            else text = "Tidak ada yang bisa dicuri";
+            else text = "Nothing to steal";
             Log(thief.Name + ": " + text + ".");
             return new BattleEvent { Target = thief, Kind = EventKind.Info, Text = text };
         }
@@ -594,14 +613,14 @@ namespace Oddyseus.Core
             UnitData d = GameData.CreateEnemy(id);
             if (d == null)
             {
-                Log(caller.Name + " memanggil bantuan, tapi tidak ada yang datang.");
-                return new BattleEvent { Target = caller, Kind = EventKind.Info, Text = "Bantuan gagal" };
+                Log(caller.Name + " calls for help, but no one comes.");
+                return new BattleEvent { Target = caller, Kind = EventKind.Info, Text = "Call failed" };
             }
             var u = new Unit(d, true, d.MaxHp);
             Enemies.Add(u);
             All.Add(u);   // ikut roll initiative di ronde berikutnya
-            Log(caller.Name + " memanggil bantuan: " + u.Name + ".");
-            return new BattleEvent { Target = u, Kind = EventKind.Info, Text = "Bantuan: " + u.Name };
+            Log(caller.Name + " calls for help: " + u.Name + ".");
+            return new BattleEvent { Target = u, Kind = EventKind.Info, Text = "Reinforcement: " + u.Name };
         }
     }
 }

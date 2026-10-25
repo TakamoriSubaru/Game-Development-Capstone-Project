@@ -1,60 +1,110 @@
+using System;
 using UnityEngine;
 
-/// <summary>Player settings, saved with PlayerPrefs so they stick between launches.</summary>
+/// <summary>
+/// Player settings saved in PlayerPrefs.
+/// Music and SFX are 0..1 (default 0.7 = 70%).
+/// CompanionChatter has no screen in the Settings panel (hidden), default ON.
+/// There is no fullscreen option anymore.
+/// </summary>
 public static class GameSettings
 {
-    const string VolumeKey = "Oddyseus.Volume";
-    const string FullscreenKey = "Oddyseus.Fullscreen";
-    const string ChatterKey = "Oddyseus.CompanionChatter";
+    const string KeyMusic = "Oddyseus.MusicVolume";
+    const string KeySfx = "Oddyseus.SfxVolume";
+    const string KeyChatter = "Oddyseus.CompanionChatter";
 
-    static int chatterCache = -1;
+    public const float DefaultVolume = 0.7f;
 
-    /// <summary>0..1 master volume.</summary>
-    public static float Volume
+    static bool loaded;
+    static float music = DefaultVolume;
+    static float sfx = DefaultVolume;
+    static bool chatter = true;
+
+    // Raised whenever a value changes (AudioManager listens to this).
+    public static event Action Changed;
+
+    public static float MusicVolume
     {
-        get { return PlayerPrefs.GetFloat(VolumeKey, 1f); }
+        get { EnsureLoaded(); return music; }
         set
         {
+            EnsureLoaded();
             value = Mathf.Clamp01(value);
-            PlayerPrefs.SetFloat(VolumeKey, value);
-            AudioListener.volume = value;
+            if (Mathf.Approximately(music, value)) return;
+            music = value;
+            PlayerPrefs.SetFloat(KeyMusic, music);
+            RaiseChanged();
         }
     }
 
-    /// <summary>PC only. (Does nothing visible inside the Unity Editor.)</summary>
-    public static bool Fullscreen
+    public static float SfxVolume
     {
-        get { return Screen.fullScreen; }
+        get { EnsureLoaded(); return sfx; }
         set
         {
-            PlayerPrefs.SetInt(FullscreenKey, value ? 1 : 0);
-            Screen.fullScreen = value;
+            EnsureLoaded();
+            value = Mathf.Clamp01(value);
+            if (Mathf.Approximately(sfx, value)) return;
+            sfx = value;
+            PlayerPrefs.SetFloat(KeySfx, sfx);
+            RaiseChanged();
         }
     }
 
-    /// <summary>When on, the lobby companion talks by themselves every so often.</summary>
+    // Hidden setting (no UI). Default ON.
     public static bool CompanionChatter
     {
-        get
-        {
-            if (chatterCache < 0) chatterCache = PlayerPrefs.GetInt(ChatterKey, 1);
-            return chatterCache == 1;
-        }
+        get { EnsureLoaded(); return chatter; }
         set
         {
-            chatterCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(ChatterKey, chatterCache);
+            EnsureLoaded();
+            if (chatter == value) return;
+            chatter = value;
+            PlayerPrefs.SetInt(KeyChatter, chatter ? 1 : 0);
+            PlayerPrefs.Save();
+            RaiseChanged();
         }
     }
 
-    public static void Save() { PlayerPrefs.Save(); }
-
-    // Applies the saved volume / fullscreen the moment the game starts.
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    static void Apply()
+    public static void Load()
     {
-        AudioListener.volume = Volume;
-        if (!Application.isMobilePlatform && PlayerPrefs.HasKey(FullscreenKey))
-            Screen.fullScreen = PlayerPrefs.GetInt(FullscreenKey) == 1;
+        music = Mathf.Clamp01(PlayerPrefs.GetFloat(KeyMusic, DefaultVolume));
+        sfx = Mathf.Clamp01(PlayerPrefs.GetFloat(KeySfx, DefaultVolume));
+        chatter = PlayerPrefs.GetInt(KeyChatter, 1) == 1;
+        loaded = true;
+        RaiseChanged();
+    }
+
+    public static void Save()
+    {
+        EnsureLoaded();
+        PlayerPrefs.SetFloat(KeyMusic, music);
+        PlayerPrefs.SetFloat(KeySfx, sfx);
+        PlayerPrefs.SetInt(KeyChatter, chatter ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public static void ResetToDefaults()
+    {
+        music = DefaultVolume;
+        sfx = DefaultVolume;
+        chatter = true;
+        loaded = true;
+        Save();
+        RaiseChanged();
+    }
+
+    static void EnsureLoaded()
+    {
+        if (loaded) return;
+        music = Mathf.Clamp01(PlayerPrefs.GetFloat(KeyMusic, DefaultVolume));
+        sfx = Mathf.Clamp01(PlayerPrefs.GetFloat(KeySfx, DefaultVolume));
+        chatter = PlayerPrefs.GetInt(KeyChatter, 1) == 1;
+        loaded = true;
+    }
+
+    static void RaiseChanged()
+    {
+        if (Changed != null) Changed();
     }
 }

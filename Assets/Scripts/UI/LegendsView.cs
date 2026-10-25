@@ -62,7 +62,7 @@ namespace Oddyseus.UI
 
             UIFactory.Label(card.transform, d.Name, 22, HubTheme.Marble, TextAnchor.MiddleLeft, 0.33f, 0.68f, 0.97f, 0.92f);
             UIFactory.Label(card.transform, UnitData.RoleLabel(d.Role), 16, HubTheme.Gold, TextAnchor.MiddleLeft, 0.33f, 0.50f, 0.97f, 0.68f);
-            UIFactory.Label(card.transform, "HP " + d.MaxHp + "  ATK " + d.Atk + "  DEF " + d.Def + "  SPD " + d.Speed,
+            UIFactory.Label(card.transform, "HP " + d.MaxHp + "  ATK " + d.Atk + "  DEF " + d.Def + "  SPD " + d.SpeedLabel,
                             13, HubTheme.Muted, TextAnchor.MiddleLeft, 0.33f, 0.30f, 0.97f, 0.50f);
             UIFactory.Label(card.transform, CostumeLine(d.Name), 13, HubTheme.Marble, TextAnchor.UpperLeft, 0.04f, 0.03f, 0.96f, 0.28f);
         }

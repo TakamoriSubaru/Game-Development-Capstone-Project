@@ -11,7 +11,11 @@ namespace Oddyseus.Core
         public int MaxHp;
         public int Atk;
         public int Def;
-        public int Speed;
+        // Speed ala Limbus: tiap ronde unit me-roll angka di antara SpeedMin dan SpeedMax. Angka tertinggi bertindak duluan.
+        public int SpeedMin = 3;
+        public int SpeedMax = 5;
+        public int Speed { get { return (SpeedMin + SpeedMax) / 2; } }   // rata-rata, hanya untuk tampilan
+        public string SpeedLabel { get { return SpeedMin == SpeedMax ? SpeedMin.ToString() : SpeedMin + "-" + SpeedMax; } }
         public string PortraitHex = "#888888";   // warna placeholder sampai ada portrait dari artist
         public List<Skill> Skills = new List<Skill>();
         public int[] Equipped = { 0, 1, 2, 3 };  // indeks ke Skills
