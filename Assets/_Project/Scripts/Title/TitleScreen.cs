@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// Title / splash screen ("Night Sea and Bronze"). Press any key / tap goes to the Lobby.
+/// Title / splash screen ("Night Sea and Bronze"). Tap / click on the screen goes to the Lobby.
 ///
 /// The scene made by SceneBuilder only has old placeholder UI on this object. At runtime this script
 /// hides that and builds the new layout with the UI Kit, so NO scene rebuild is needed.
@@ -19,6 +19,8 @@ public class TitleScreen : MonoBehaviour
     public string versionLabel = "v0.1";
 
     const string BackgroundResource = "UIKit/title_bg";
+    const string ShipSoundResource = "Audio/ship_sailing";
+    const float LogoY = 70f;   // was 150: lower = further from the top border
     static readonly Vector2 C = new Vector2(0.5f, 0.5f);
 
     Canvas ui;
@@ -29,6 +31,12 @@ public class TitleScreen : MonoBehaviour
     void Awake()
     {
         startTime = Time.time;
+
+        // Ship sailing sound when the game first boots into the Title.
+        // Put the file at Assets/_Project/Resources/Audio/ship_sailing.(wav/mp3/ogg).
+        AudioClip sail = Resources.Load<AudioClip>(ShipSoundResource);
+        if (sail != null) AudioManager.Instance.PlaySfx(sail, 1f);
+        else Debug.LogWarning("TitleScreen: ship sound not found at Resources/" + ShipSoundResource);
 
         // Hide the old placeholder UI that lives on this object.
         Canvas old = GetComponent<Canvas>();
@@ -48,7 +56,8 @@ public class TitleScreen : MonoBehaviour
             promptGroup.alpha = Mathf.Clamp01(t - 0.8f) * pulse;
         }
 
-        if (!going && GameInput.AnyKeyDown)
+        // Only a tap / mouse click on the game screen starts the game (not any keyboard key).
+        if (!going && t > 0.3f && GameInput.PointerDown)
         {
             going = true;
             SceneFader.LoadScene(GameScenes.Lobby, 0.8f);
@@ -97,7 +106,7 @@ public class TitleScreen : MonoBehaviour
     void BuildLogo(Transform root)
     {
         RectTransform logo = UIKit.NewRect("Logo", root);
-        UIKit.Place(logo, C, C, new Vector2(0f, 150f), new Vector2(1100f, 360f));
+        UIKit.Place(logo, C, C, new Vector2(0f, LogoY), new Vector2(1100f, 360f));
         logoGroup = logo.gameObject.AddComponent<CanvasGroup>();
         logoGroup.alpha = 0f;
 
@@ -136,10 +145,8 @@ public class TitleScreen : MonoBehaviour
         promptGroup = box.gameObject.AddComponent<CanvasGroup>();
         promptGroup.alpha = 0f;
 
-        Txt(box, "Press Any Key", "Press any key", UITextStyle.TitleCaps, UITheme.Cream,
-            48f, 4f, new Vector2(0f, 38f), new Vector2(1400f, 70f));
-        Txt(box, "Tap To Begin", "Tap to begin", UITextStyle.Subtitle, WithAlpha(UITheme.Cream, 0.85f),
-            32f, 0f, new Vector2(0f, -32f), new Vector2(1400f, 50f));
+        Txt(box, "Tap To Begin", "Tap to begin", UITextStyle.TitleCaps, UITheme.Cream,
+            48f, 4f, new Vector2(0f, 20f), new Vector2(1400f, 70f));
     }
 
     // ------------------------------------------------------------------
