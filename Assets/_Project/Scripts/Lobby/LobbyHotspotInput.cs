@@ -15,13 +15,18 @@ public class LobbyHotspotInput : MonoBehaviour
     void Update()
     {
         Hotspot h = null;
+        Collider2D hitCol = null;
         bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
         if (!rig.InputLocked && !overUI)
         {
             Vector2 sp = GameInput.PointerPosition;
             Vector3 world = cam.ScreenToWorldPoint(new Vector3(sp.x, sp.y, 10f));
             var col = Physics2D.OverlapPoint(world);
-            if (col != null) h = col.GetComponentInParent<Hotspot>();
+            if (col != null)
+            {
+                h = col.GetComponentInParent<Hotspot>();
+                hitCol = col;
+            }
         }
 
         if (h != hovered)
@@ -29,7 +34,13 @@ public class LobbyHotspotInput : MonoBehaviour
             if (hovered != null) hovered.SetHovered(false);
             hovered = h;
             if (hovered != null) hovered.SetHovered(true);
-            ui.SetHover(hovered);
+
+            if (hovered != null && hitCol != null)
+            {
+                Bounds b = hitCol.bounds;
+                ui.SetTooltip(hovered.Label, new Vector3(b.center.x, b.max.y, 0f));   // ribbon pointer on top of the object
+            }
+            else ui.SetTooltip("");
         }
 
         if (hovered != null && GameInput.PointerDown)

@@ -32,7 +32,7 @@ public class ExitDoorHotspot : Hotspot
     public override void Click()
     {
         if (opened) return;
-        LobbyUI ui = FindFirstObjectByType<LobbyUI>();
+        LobbyUI ui = FindAnyObjectByType<LobbyUI>();
         if (ui == null) { Leave(); return; }
         rig.InputLocked = true;            // freeze the camera while the question is open
         ui.AskLeave(Leave, Stay);

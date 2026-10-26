@@ -61,7 +61,7 @@ public class MenuObjectHotspot : Hotspot
 
     public override void Click()
     {
-        LobbyUI ui = FindFirstObjectByType<LobbyUI>();
+        LobbyUI ui = FindAnyObjectByType<LobbyUI>();
         if (action == MenuAction.Settings && ui != null) { ui.OpenSettings(); return; }
         LobbyMenu.Open(action);
     }
