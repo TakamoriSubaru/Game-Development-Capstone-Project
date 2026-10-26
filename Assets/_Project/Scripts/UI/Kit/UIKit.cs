@@ -85,10 +85,18 @@ public static class UIKit
     }
 
     // Greek-key corner brackets. One sprite, flipped with negative scale.
-    // The corner ornaments are now part of the "panel_orn" sprite itself (baked into its corners),
-    // so nothing is added here any more. Kept so the callers do not change.
     static void AddCorners(Transform parent, float inset)
     {
+        string[] names = { "TL", "TR", "BL", "BR" };
+        Vector2[] anchors = { new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 0), new Vector2(1, 0) };
+        float[] px = { 1f, -1f, 1f, -1f };
+        float[] py = { -1f, -1f, 1f, 1f };
+        for (int i = 0; i < 4; i++)
+        {
+            Image img = NewImage("Corner " + names[i] + " (replace sprite)", parent, "corner", Image.Type.Simple, Color.white, false);
+            Place(img.rectTransform, anchors[i], Center, new Vector2(px[i] * inset, py[i] * inset), new Vector2(40f, 40f));
+            img.rectTransform.localScale = new Vector3(px[i], py[i], 1f);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -117,7 +125,7 @@ public static class UIKit
     // Adds an EventSystem with the right input module (new Input System or legacy) if the scene has none.
     public static void EnsureEventSystem()
     {
-        if (UnityEngine.Object.FindFirstObjectByType<EventSystem>() != null) return;
+        if (UnityEngine.Object.FindAnyObjectByType<EventSystem>() != null) return;
         GameObject go = new GameObject("EventSystem", typeof(EventSystem));
         Type t = null;
 #if ENABLE_INPUT_SYSTEM
@@ -287,7 +295,7 @@ public static class UIKit
         RectTransform rt = NewRect("Dialogue Box", parent);
         rt.sizeDelta = UITheme.DialogueBoxSize;
 
-        Image frame = NewImage("Frame (replace sprite)", rt, "panel_orn", Image.Type.Sliced, Color.white, true);
+        Image frame = NewImage("Frame (replace sprite)", rt, "panel", Image.Type.Sliced, Color.white, true);
         Stretch(frame.rectTransform);
         AddCorners(rt, 26f);
 
@@ -419,7 +427,7 @@ public static class UIKit
 
         RectTransform panel = NewRect("Panel", root);
         Place(panel, Center, Center, Vector2.zero, UITheme.ConfirmPanelSize);
-        Image frame = NewImage("Frame (replace sprite)", panel, "panel_orn", Image.Type.Sliced, Color.white, true);
+        Image frame = NewImage("Frame (replace sprite)", panel, "panel", Image.Type.Sliced, Color.white, true);
         Stretch(frame.rectTransform);
         AddCorners(panel, 26f);
 
@@ -504,7 +512,7 @@ public static class UIKit
 
         RectTransform panel = NewRect("Panel", root);
         Place(panel, Center, Center, Vector2.zero, UITheme.SettingsPanelSize);
-        Image frame = NewImage("Frame (replace sprite)", panel, "panel_orn", Image.Type.Sliced, Color.white, true);
+        Image frame = NewImage("Frame (replace sprite)", panel, "panel", Image.Type.Sliced, Color.white, true);
         Stretch(frame.rectTransform);
         AddCorners(panel, 28f);
 

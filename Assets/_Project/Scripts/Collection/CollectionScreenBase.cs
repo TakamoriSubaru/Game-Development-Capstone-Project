@@ -76,7 +76,7 @@ public abstract class CollectionScreenBase : MonoBehaviour
     protected virtual void Update()
     {
         if (!EscapePressed()) return;
-        ConfirmPanel open = FindFirstObjectByType<ConfirmPanel>();
+        ConfirmPanel open = FindAnyObjectByType<ConfirmPanel>();
         if (open != null && open.IsOpen) return;
         OnBack();
     }
