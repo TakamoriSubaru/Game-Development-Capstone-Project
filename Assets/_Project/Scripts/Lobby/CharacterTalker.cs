@@ -2,21 +2,24 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// The lobby character. Talks (typewriter text + talking animation) when the camera arrives at the
-/// Lobby stop, and again when clicked. Plug in your Animator: the script sets bool "Talking".
-/// Without an Animator, a placeholder mouth/body bob plays so you can see it "speak".
+/// The lobby character (Polites). Talks through the Kit DialogueBox (typewriter) when the camera
+/// arrives at the Lobby stop (if Companion Chatter is on) and again when clicked.
+/// Plug in your Animator: the script sets bool "Talking".
+/// Without an Animator, a small body bob plays while the line types, and a slow breathing bob when idle.
+/// Clicking the dialogue box once the line is finished closes it.
 /// </summary>
 public class CharacterTalker : Hotspot
 {
     public LobbyCameraRig rig;
     public LobbyUI ui;
-    public Transform model;      // whole character (placeholder bob)
+    public Transform model;      // whole character art (placeholder bob)
     public Transform mouth;      // optional, placeholder mouth that opens/closes
     public Animator animator;
-    public string speakerName = "Companion";
+    public string speakerName = "Polites";
+    public float idleSeconds = 6f;   // how long a finished line stays before it closes by itself
     [TextArea] public string[] lines =
     {
-        "Welcome back, Odysseus. The sea is calling again.",
+        "A quiet day by the fire. I could get used to this.",
         "Pick a direction. The window, the map, or the door.",
         "Ithaca is still far. But every journey starts at a table like this one.",
         "The crew is restless. Shall we look at the charts?"
@@ -31,25 +34,42 @@ public class CharacterTalker : Hotspot
 
     void Awake()
     {
-        lineIndex = Random.Range(0, lines.Length);
+        lineIndex = 0;
         if (model != null) modelHome = model.localPosition;
         if (mouth != null) mouthScale = mouth.localScale;
     }
 
-    void OnEnable() => rig.StopChanged += OnStop;
-    void OnDisable() => rig.StopChanged -= OnStop;
+    void OnEnable()
+    {
+        if (rig != null) rig.StopChanged += OnStop;
+        if (ui != null) ui.SpeechContinued += OnContinue;
+    }
+
+    void OnDisable()
+    {
+        if (rig != null) rig.StopChanged -= OnStop;
+        if (ui != null) ui.SpeechContinued -= OnContinue;
+    }
 
     void OnStop(int index)
     {
-        if (index == LobbyCameraRig.FrontStop) Say();
+        if (index == LobbyCameraRig.FrontStop)
+        {
+            if (GameSettings.CompanionChatter) Say();
+        }
         else StopTalking();
+    }
+
+    void OnContinue()
+    {
+        if (routine != null) StopTalking();
     }
 
     public override void Click() => Say();
 
     public void Say()
     {
-        if (lines.Length == 0) return;
+        if (lines == null || lines.Length == 0) return;
         if (routine != null) StopCoroutine(routine);
         routine = StartCoroutine(SayRoutine(lines[lineIndex++ % lines.Length]));
     }
@@ -57,14 +77,16 @@ public class CharacterTalker : Hotspot
     IEnumerator SayRoutine(string line)
     {
         SetTalking(true);
-        ui.ShowSpeech(speakerName, "");
-        for (int i = 1; i <= line.Length; i++)
-        {
-            ui.SetSpeechLine(line.Substring(0, i));
-            yield return new WaitForSeconds(0.03f);
-        }
+        ui.ShowSpeech(speakerName, line);
+        yield return null;
+        while (ui.IsSpeechTyping) yield return null;
         SetTalking(false);
-        yield return new WaitForSeconds(4f);
+        float t = 0f;
+        while (t < idleSeconds && ui.IsSpeechOpen)
+        {
+            t += Time.deltaTime;
+            yield return null;
+        }
         ui.HideSpeech();
         routine = null;
     }
@@ -82,19 +104,22 @@ public class CharacterTalker : Hotspot
         talking = value;
         if (animator != null && animator.runtimeAnimatorController != null)
             animator.SetBool("Talking", value);
-        if (!value)
-        {
-            if (model != null) model.localPosition = modelHome;
-            if (mouth != null) mouth.localScale = mouthScale;
-        }
+        if (!value && mouth != null) mouth.localScale = mouthScale;
     }
 
     void Update()
     {
         bool placeholder = animator == null || animator.runtimeAnimatorController == null;
-        if (!talking || !placeholder) return;
-        float s = Mathf.Abs(Mathf.Sin(Time.time * 14f));
-        if (mouth != null) mouth.localScale = new Vector3(mouthScale.x, mouthScale.y * (0.4f + 2.2f * s), 1f);
-        if (model != null) model.localPosition = modelHome + Vector3.up * 0.05f * s;
+        if (!placeholder || model == null) return;
+        if (talking)
+        {
+            float s = Mathf.Abs(Mathf.Sin(Time.time * 14f));
+            if (mouth != null) mouth.localScale = new Vector3(mouthScale.x, mouthScale.y * (0.4f + 2.2f * s), 1f);
+            model.localPosition = modelHome + Vector3.up * 0.04f * s;
+        }
+        else
+        {
+            model.localPosition = modelHome + Vector3.up * 0.015f * (0.5f + 0.5f * Mathf.Sin(Time.time * 1.6f));
+        }
     }
 }

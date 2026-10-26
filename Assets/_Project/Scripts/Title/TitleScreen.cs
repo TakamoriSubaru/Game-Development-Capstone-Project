@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -20,33 +19,25 @@ public class TitleScreen : MonoBehaviour
 
     public string versionLabel = "v0.1";
     public bool showArtHint = false;        // shows the "ART: ..." debug label when no title_bg.png exists
-    public float inputDelay = 0.5f;         // ignore clicks right after the scene loads
-
-    public enum BorderMode { None, AroundLogo, FullWidth }
-    [Tooltip("None = no border, AroundLogo = short strips above/below the logo, FullWidth = strips across the whole screen")]
-    public BorderMode border = BorderMode.FullWidth;
-
-    [Tooltip("Optional: drag the logo sprite here. If empty, Resources/UIKit/title_logo is used.")]
+    public bool useScroll = true;           // Greek scroll (Resources/UIKit/title_scroll.png) in the middle, logo + prompt on it
+    public bool blackBackground = false;    // tick for plain black
+    public bool useBackgroundArt = false;   // tick to use Resources/UIKit/title_bg.png instead of the night-sea gradient
+    public float scrollScale = 1.15f;       // size of the scroll on screen
+    [Header("Optional: drag sprites here instead of using Resources")]
     public Sprite logoSprite;
-    [Tooltip("Soft dark band behind the logo so it stays readable on any artwork")]
-    public bool logoBackdrop = true;
-    [Range(0f, 1f)] public float backdropAlpha = 0.6f;
-    public float logoY = 150f;
-    [Tooltip("Logo width in canvas units (reference 1920x1080)")]
-    public float logoWidth = 1000f;
-    [Tooltip("Space between the logo and the Greek key strips (bigger = more airy)")]
-    public float borderPadding = 100f;
+    public Sprite scrollSprite;
+    public float inputDelay = 0.5f;         // ignore keys right after the scene loads
 
     const string BackgroundResource = "UIKit/title_bg";
     static readonly Vector2 C = new Vector2(0.5f, 0.5f);
 
     Canvas ui;
-    CanvasGroup logoGroup, promptGroup, borderGroup, backdropGroup;
-    readonly List<RawImage> fullBars = new List<RawImage>();
+    CanvasGroup logoGroup, promptGroup;
     float startTime;
     bool going;
+    bool scrollOn;
     static Texture2D _keyTex;
-    static Sprite _diamondSprite, _backdropFull, _backdropSoft;
+    static Sprite _diamondSprite;
 
     void Awake()
     {
@@ -64,19 +55,12 @@ public class TitleScreen : MonoBehaviour
     {
         float t = Time.unscaledTime - startTime;
         if (logoGroup != null) logoGroup.alpha = Mathf.Clamp01(t / 1.2f);
-        if (borderGroup != null) borderGroup.alpha = Mathf.Clamp01(t / 1.2f);
-        if (backdropGroup != null) backdropGroup.alpha = Mathf.Clamp01(t / 1.2f);
-        for (int i = 0; i < fullBars.Count; i++)
-        {
-            // keep tiles square (32 units each) at any screen width
-            float w = fullBars[i].rectTransform.rect.width;
-            fullBars[i].uvRect = new Rect(0f, 0f, w / 32f, 1f);
-        }
         if (promptGroup != null)
         {
             float pulse = 0.8f + 0.2f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 3f));
             promptGroup.alpha = Mathf.Clamp01(t - 0.8f) * pulse;
         }
+
     }
 
     // Called only when the player clicks / taps the screen.
@@ -96,8 +80,9 @@ public class TitleScreen : MonoBehaviour
         Transform root = ui.transform;
 
         BuildBackground(root);
-        BuildLogo(root);
-        BuildPrompt(root);
+        Transform content = BuildScroll(root);
+        BuildLogo(content);
+        BuildPrompt(content);
 
         TMP_Text ver = UIKit.CreateText(root, "Version", versionLabel, UITextStyle.Small,
                                         WithAlpha(UITheme.Cream, 0.7f), TextAlignmentOptions.MidlineLeft);
@@ -110,7 +95,13 @@ public class TitleScreen : MonoBehaviour
     void BuildBackground(Transform root)
     {
         Image bg = UIKit.NewImage("Background (replace sprite)", root, null, Image.Type.Simple, Color.white, false);
-        Sprite art = Resources.Load<Sprite>(BackgroundResource);
+        if (blackBackground)
+        {
+            bg.color = Color.black;
+            UIKit.Stretch(bg.rectTransform);
+            return;
+        }
+        Sprite art = useBackgroundArt ? Resources.Load<Sprite>(BackgroundResource) : null;
         if (art != null)
         {
             bg.sprite = art;
@@ -123,42 +114,59 @@ public class TitleScreen : MonoBehaviour
 
         bg.sprite = NightSeaSprite();
         UIKit.Stretch(bg.rectTransform);
+    }
 
-        if (showArtHint)
+    // Scroll + logo + prompt live in one container so they can be scaled together.
+    Transform BuildScroll(Transform root)
+    {
+        RectTransform content = UIKit.NewRect("Scroll Content", root);
+        UIKit.Stretch(content);
+        Sprite sc = scrollSprite != null ? scrollSprite : LoadArt("UIKit/title_scroll");
+        if (useScroll && sc != null)
         {
-            TMP_Text tag = UIKit.CreateText(root, "ART Label", "ART: title illustration (Resources/UIKit/title_bg.png)",
-                                            UITextStyle.Small, WithAlpha(UITheme.Cream, 0.35f), TextAlignmentOptions.MidlineLeft);
-            UIKit.Place(tag.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -20f), new Vector2(1000f, 40f));
+            Image img = UIKit.NewImage("Scroll (replace Resources/UIKit/title_scroll.png)", content, null, Image.Type.Simple, Color.white, false);
+            img.sprite = sc;
+            UIKit.Place(img.rectTransform, C, C, new Vector2(0f, 40f), new Vector2(1600f, 720f));
+            scrollOn = true;
+            content.localScale = new Vector3(scrollScale, scrollScale, 1f);
         }
+        return content;
+    }
+
+    static void SetOutline(TMP_Text t, float width)
+    {
+        t.outlineColor = new Color32(0, 0, 0, 255);
+        t.outlineWidth = width;
     }
 
     void BuildLogo(Transform root)
     {
-        Sprite logoArt = logoSprite != null ? logoSprite : LoadLogo();
-        float halfH = logoArt != null ? logoWidth * logoArt.rect.height / logoArt.rect.width * 0.5f + borderPadding : 158f + (borderPadding - 34f);
-        BuildBackdrop(root, logoY, halfH);   // created first so it sits behind everything else of the logo
-
         RectTransform logo = UIKit.NewRect("Logo", root);
-        UIKit.Place(logo, C, C, new Vector2(0f, logoY), new Vector2(1100f, 360f));
+        UIKit.Place(logo, C, C, new Vector2(0f, scrollOn ? 130f : 150f), new Vector2(1100f, 360f));
         logoGroup = logo.gameObject.AddComponent<CanvasGroup>();
         logoGroup.alpha = 0f;
 
         // Logo picture (Resources/UIKit/title_logo.png). If it exists it replaces the text logo below.
+        Sprite logoArt = logoSprite != null ? logoSprite : LoadLogo();
         if (logoArt != null)
         {
-            // NewImage takes a sprite NAME (string), so pass null and assign the Sprite afterwards.
             Image li = UIKit.NewImage("Logo Image (replace Resources/UIKit/title_logo.png)", logo, null, Image.Type.Simple, Color.white, false);
             li.sprite = logoArt;
             li.preserveAspect = true;
-            float lw = logoWidth;
+            float lw = 1000f;
             float lh = lw * logoArt.rect.height / logoArt.rect.width;
             UIKit.Place(li.rectTransform, C, C, Vector2.zero, new Vector2(lw, lh));
+            Outline ol = li.gameObject.AddComponent<Outline>();   // black border so the gold logo reads on any background
+            ol.effectColor = new Color(0f, 0f, 0f, 0.95f);
+            ol.effectDistance = new Vector2(3f, -3f);
             Shadow sh = li.gameObject.AddComponent<Shadow>();
-            sh.effectColor = new Color(0f, 0f, 0f, 0.6f);
-            sh.effectDistance = new Vector2(4f, -4f);
-            BuildBorders(root, logoY, halfH);
+            sh.effectColor = new Color(0f, 0f, 0f, 0.5f);
+            sh.effectDistance = new Vector2(6f, -6f);
             return;
         }
+
+        Color keyColor = WithAlpha(Color.white, 0.9f);
+        if (!scrollOn) MakeKey(logo, "Greek Key Top (replace Resources/UIKit/key_tile.png)", new Vector2(0f, 158f), keyColor);
 
         // Drop shadow first (behind), then the gold title.
         TMP_Text shadow = Txt(logo, "Title Shadow", "ODDYSEUS", UITextStyle.TitleCaps, WithAlpha(Color.black, 0.55f),
@@ -171,6 +179,7 @@ public class TitleScreen : MonoBehaviour
         Color top = UITheme.Accent;
         Color bottom = Color.Lerp(UITheme.Gold, UITheme.Bronze, 0.6f);
         title.colorGradient = new VertexGradient(top, top, bottom, bottom);
+        SetOutline(title, 0.3f);
 
         Image rule = UIKit.NewImage("Divider", logo, null, Image.Type.Simple, WithAlpha(UITheme.Gold, 0.7f), false);
         UIKit.Place(rule.rectTransform, C, C, new Vector2(0f, -42f), new Vector2(480f, 2f));
@@ -178,149 +187,44 @@ public class TitleScreen : MonoBehaviour
         dia.sprite = DiamondSprite();
         UIKit.Place(dia.rectTransform, C, C, new Vector2(0f, -42f), new Vector2(22f, 22f));
 
-        Txt(logo, "Subtitle", "JOURNEY'S END", UITextStyle.Label, UITheme.Gold,
+        TMP_Text subtitle = Txt(logo, "Subtitle", "JOURNEY'S END", UITextStyle.Label, scrollOn ? UITheme.Accent : UITheme.Gold,
             56f, 14f, new Vector2(0f, -94f), new Vector2(1100f, 80f));
+        SetOutline(subtitle, 0.3f);
 
-        BuildBorders(root, logoY, halfH);
+        if (!scrollOn) MakeKey(logo, "Greek Key Bottom (replace Resources/UIKit/key_tile.png)", new Vector2(0f, -158f), keyColor);
     }
 
-    // Soft dark band behind the logo (full width when border = FullWidth, otherwise a fading plate).
-    void BuildBackdrop(Transform root, float centerY, float halfH)
+    static Sprite LoadLogo() { return LoadArt("UIKit/title_logo"); }
+
+    static Sprite LoadArt(string path)
     {
-        if (!logoBackdrop) return;
-
-        RectTransform holder = UIKit.NewRect("Logo Backdrop", root);
-        UIKit.Stretch(holder);
-        backdropGroup = holder.gameObject.AddComponent<CanvasGroup>();
-        backdropGroup.alpha = 0f;
-        backdropGroup.blocksRaycasts = false;
-
-        bool full = border == BorderMode.FullWidth;
-        Image img = UIKit.NewImage("Backdrop", holder, null, Image.Type.Simple, WithAlpha(UITheme.NavyDeep, backdropAlpha), false);
-        img.sprite = BackdropSprite(full);
-        RectTransform r = img.rectTransform;
-        float height = halfH * 2f + 150f;
-        if (full)
-        {
-            r.anchorMin = new Vector2(0f, 0.5f);
-            r.anchorMax = new Vector2(1f, 0.5f);
-            r.pivot = new Vector2(0.5f, 0.5f);
-            r.anchoredPosition = new Vector2(0f, centerY);
-            r.sizeDelta = new Vector2(0f, height);
-        }
-        else
-        {
-            UIKit.Place(r, C, C, new Vector2(0f, centerY), new Vector2(1500f, height));
-        }
-    }
-
-    // White pixels, alpha = soft profile. The Image color gives the tint and strength.
-    static Sprite BackdropSprite(bool fullWidth)
-    {
-        Sprite cached = fullWidth ? _backdropFull : _backdropSoft;
-        if (cached != null) return cached;
-
-        const int w = 64, h = 64;
-        Color[] px = new Color[w * h];
-        for (int y = 0; y < h; y++)
-        {
-            float v = (y + 0.5f) / h;
-            float fy = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((1f - Mathf.Abs(v - 0.5f) * 2f) / 0.6f));
-            for (int x = 0; x < w; x++)
-            {
-                float u = (x + 0.5f) / w;
-                float fx = fullWidth ? 1f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((1f - Mathf.Abs(u - 0.5f) * 2f) / 0.4f));
-                px[y * w + x] = new Color(1f, 1f, 1f, fy * fx);
-            }
-        }
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        tex.filterMode = FilterMode.Bilinear;
-        tex.SetPixels(px);
-        tex.Apply(false, false);
-        Sprite sp = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
-        if (fullWidth) _backdropFull = sp; else _backdropSoft = sp;
-        return sp;
-    }
-
-    // Greek key strips above and below the logo. centerY = logo center, halfH = distance from center to each strip.
-    void BuildBorders(Transform root, float centerY, float halfH)
-    {
-        if (border == BorderMode.None) return;
-
-        RectTransform holder = UIKit.NewRect("Border", root);
-        UIKit.Stretch(holder);
-        borderGroup = holder.gameObject.AddComponent<CanvasGroup>();
-        borderGroup.alpha = 0f;
-        borderGroup.blocksRaycasts = false;
-
-        Color keyColor = WithAlpha(Color.white, 0.9f);
-        float[] ys = { centerY + halfH, centerY - halfH };
-        for (int i = 0; i < ys.Length; i++)
-        {
-            RawImage bar = MakeKey(holder, i == 0 ? "Greek Key Top" : "Greek Key Bottom", new Vector2(0f, ys[i]), keyColor);
-            if (border == BorderMode.FullWidth)
-            {
-                RectTransform r = bar.rectTransform;
-                r.anchorMin = new Vector2(0f, 0.5f);
-                r.anchorMax = new Vector2(1f, 0.5f);
-                r.pivot = new Vector2(0.5f, 0.5f);
-                r.anchoredPosition = new Vector2(0f, ys[i]);
-                r.sizeDelta = new Vector2(0f, 32f);
-                fullBars.Add(bar);
-            }
-        }
-    }
-
-    static readonly string[] LogoPaths = { "UIKit/title_logo", "UIKit/Title_logo", "title_logo", "Title_logo" };
-
-    static Sprite LoadLogo()
-    {
-        for (int i = 0; i < LogoPaths.Length; i++)
-        {
-            string p = LogoPaths[i];
-            Sprite sp = Resources.Load<Sprite>(p);
-            if (sp != null) return sp;
-
-            Sprite[] all = Resources.LoadAll<Sprite>(p);   // Sprite Mode = Multiple
-            if (all != null && all.Length > 0) return all[0];
-
-            Texture2D tex = Resources.Load<Texture2D>(p);
-            if (tex != null) return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-        }
-#if UNITY_EDITOR
-        // Editor-only fallback: find title_logo anywhere in the project, so it works even outside Resources/.
-        string[] guids = UnityEditor.AssetDatabase.FindAssets("title_logo");
-        for (int i = 0; i < guids.Length; i++)
-        {
-            string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[i]);
-            if (!path.ToLowerInvariant().EndsWith("title_logo.png")) continue;
-            Object[] assets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(path);
-            for (int k = 0; k < assets.Length; k++)
-            {
-                Sprite sp = assets[k] as Sprite;
-                if (sp != null)
-                {
-                    Debug.LogWarning("[TitleScreen] title_logo loaded from '" + path + "' (editor only). " +
-                                     "For builds, move it to Assets/_Project/Resources/UIKit/title_logo.png.");
-                    return sp;
-                }
-            }
-            Texture2D t2 = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            if (t2 != null) return Sprite.Create(t2, new Rect(0, 0, t2.width, t2.height), new Vector2(0.5f, 0.5f), 100f);
-        }
-#endif
-        Debug.LogWarning("[TitleScreen] title_logo not found. Put it at Assets/_Project/Resources/UIKit/title_logo.png " +
-                         "(the folder must be named exactly 'Resources'), or drag the sprite into 'Logo Sprite' on the TitleScreen component.");
-        return null;
+        Sprite sp = Resources.Load<Sprite>(path);
+        if (sp != null) return sp;
+        Texture2D tex = Resources.Load<Texture2D>(path);
+        if (tex == null) return null;
+        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
     }
 
     void BuildPrompt(Transform root)
     {
         RectTransform box = UIKit.NewRect("Prompt", root);
-        UIKit.Place(box, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 110f), new Vector2(1400f, 160f));
         promptGroup = box.gameObject.AddComponent<CanvasGroup>();
         promptGroup.alpha = 0f;
+
+        if (scrollOn)
+        {
+            // Dark bronze text printed on the parchment.
+            UIKit.Place(box, C, C, new Vector2(0f, -130f), new Vector2(1400f, 160f));
+            TMP_Text p1 = Txt(box, "Click To Start", "Click to start", UITextStyle.TitleCaps, UITheme.Accent,
+                52f, 4f, new Vector2(0f, 26f), new Vector2(1400f, 70f));
+            SetOutline(p1, 0.3f);
+            TMP_Text p2 = Txt(box, "Tap To Begin", "Click anywhere on the screen", UITextStyle.Subtitle, Color.white,
+                30f, 0f, new Vector2(0f, -28f), new Vector2(1400f, 50f));
+            SetOutline(p2, 0.25f);
+            return;
+        }
+
+        UIKit.Place(box, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 110f), new Vector2(1400f, 160f));
 
         // Dark plate behind the prompt so the text never blends with the artwork.
         Image plate = UIKit.NewImage("Prompt Plate", box, null, Image.Type.Simple, new Color(0.03f, 0.1f, 0.18f, 0.78f), false);
@@ -473,10 +377,10 @@ public class TitleScreen : MonoBehaviour
     {
         const int w = 512, h = 288;
         const float horizon = 0.34f;   // fraction of the height, measured from the bottom
-        Color skyTop = UITheme.Hex("04101F");
-        Color skyLow = UITheme.Hex("123F66");
-        Color seaTop = UITheme.Hex("0B2A4A");
-        Color seaLow = UITheme.Hex("051A30");
+        Color skyTop = UITheme.Hex("0E3558");
+        Color skyLow = UITheme.Hex("3A7AA0");
+        Color seaTop = UITheme.Hex("1B4F7A");
+        Color seaLow = UITheme.Hex("0A2D4F");
 
         Color[] px = new Color[w * h];
         for (int y = 0; y < h; y++)
@@ -491,7 +395,7 @@ public class TitleScreen : MonoBehaviour
             {
                 float u = (x + 0.5f) / w;
                 float across = Mathf.Exp(-Mathf.Pow((u - 0.5f) / 0.35f, 2f));
-                Color c = Color.Lerp(baseColor, UITheme.Bronze, band * across * 0.45f);
+                Color c = Color.Lerp(baseColor, UITheme.Bronze, band * across * 0.8f);
                 c.a = 1f;
                 px[y * w + x] = c;
             }
