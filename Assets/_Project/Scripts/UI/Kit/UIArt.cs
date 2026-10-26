@@ -13,7 +13,7 @@ public static class UIArt
 
     public static readonly string[] Names =
     {
-        "panel", "panel_cream", "plate",
+        "panel", "panel_cream", "panel_orn", "plate",
         "btn_primary", "btn_primary_hover", "btn_primary_pressed",
         "btn_secondary", "btn_secondary_hover", "btn_secondary_pressed",
         "btn_edge", "btn_edge_hover", "btn_disabled",
@@ -55,7 +55,8 @@ public static class UIArt
         switch (name)
         {
             case "panel":
-            case "panel_cream": return new Vector4(40, 40, 40, 40);
+            case "panel_cream":
+            case "panel_orn": return new Vector4(40, 40, 40, 40);
             case "plate": return new Vector4(30, 30, 30, 30);
             case "glow": return new Vector4(40, 40, 40, 40);
             case "pill": return new Vector4(15, 15, 15, 15);
@@ -74,6 +75,7 @@ public static class UIArt
         {
             case "panel":
                 return Frame(96, 96, false, 22f, 1f, A(deep, 0.97f), A(navy, 0.97f), gold, 3f);
+            case "panel_orn": return PanelOrnate();
             case "panel_cream":
                 return Frame(96, 96, false, 22f, 1f, UITheme.Hex("E9DAB8"), UITheme.CardCream, gold, 4f);
             case "plate":
@@ -108,14 +110,7 @@ public static class UIArt
             case "choice_green_hover": return Choice(UITheme.ChoiceGreen, UITheme.Accent, true);
 
             case "glow": return Glow();
-            case "corner":
-                return Strokes(40, 40, gold, 2.4f, new float[][]
-                {
-                    new float[]{3,37,37,37}, new float[]{3,37,3,3},
-                    new float[]{9,31,26,31}, new float[]{9,31,9,14},
-                    new float[]{14,25,21,25}, new float[]{21,25,21,18},
-                    new float[]{21,18,14,18}, new float[]{14,18,14,25}
-                });
+            case "corner": return Corner();
             case "key_tile":
                 return Strokes(32, 32, gold, 2.2f, new float[][]
                 {
@@ -242,6 +237,99 @@ public static class UIArt
                 px[y * w + x] = new Color(color.r, color.g, color.b, Mathf.Clamp01(thick * 0.5f + 0.5f - best));
             }
         return ToTex(w, h, px);
+    }
+
+
+    // Panel frame with the corner ornaments baked into its four corners (inner bracket + small square).
+    // Square-ish corners (radius 6) so the ornament sits exactly on the frame. 9-slice border is 40,
+    // so the 40x40 corner area is never stretched.
+    static readonly float[][] OrnSegs =
+    {
+        new float[]{8.5f, 8.5f, 26f, 8.5f}, new float[]{8.5f, 8.5f, 8.5f, 26f},
+        new float[]{12f, 12f, 19f, 12f}, new float[]{19f, 12f, 19f, 19f},
+        new float[]{19f, 19f, 12f, 19f}, new float[]{12f, 19f, 12f, 12f}
+    };
+    static readonly Vector2[] OrnDots = { new Vector2(28.5f, 8.5f), new Vector2(8.5f, 28.5f) };
+
+    static Texture2D PanelOrnate()
+    {
+        const int w = 96, h = 96;
+        Texture2D t = Frame(w, h, false, 6f, 1f, A(UITheme.NavyDeep, 0.97f), A(UITheme.Navy, 0.97f), UITheme.Gold, 3f);
+        Color[] px = t.GetPixels();
+        Color gold = UITheme.Gold;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float fx = x + 0.5f, fy = y + 0.5f;
+                float best = 999f;
+                for (int c = 0; c < 4; c++)
+                {
+                    // corner-local coordinates: origin at the frame corner, both axes grow inward
+                    float lx = (c == 0 || c == 2) ? fx : w - fx;
+                    float ly = (c == 0 || c == 1) ? h - fy : fy;
+                    if (lx >= 40f || ly >= 40f) continue;
+                    for (int i = 0; i < OrnSegs.Length; i++)
+                    {
+                        float d = SegDist(lx, ly, OrnSegs[i][0], OrnSegs[i][1], OrnSegs[i][2], OrnSegs[i][3]) - 1.1f;
+                        if (d < best) best = d;
+                    }
+                    for (int i = 0; i < OrnDots.Length; i++)
+                    {
+                        float d = Vector2.Distance(new Vector2(lx, ly), OrnDots[i]) - 2.3f;
+                        if (d < best) best = d;
+                    }
+                }
+                float a = Mathf.Clamp01(0.5f - best);
+                if (a <= 0f) continue;
+                Color o = px[y * w + x];
+                o.r = Mathf.Lerp(o.r, gold.r, a);
+                o.g = Mathf.Lerp(o.g, gold.g, a);
+                o.b = Mathf.Lerp(o.b, gold.b, a);
+                o.a = Mathf.Max(o.a, a);
+                px[y * w + x] = o;
+            }
+        t.SetPixels(px);
+        t.Apply(false, false);
+        return t;
+    }
+
+    // Corner ornament (40x40, top-left version; AddCorners mirrors it). It follows the rounded corner of the
+    // "panel" frame (radius 22, border 3, 1 px inset => arc centre (23,17)): an inner bracket that runs
+    // parallel to the frame, with a small dot at each end.
+    static Texture2D Corner()
+    {
+        const int n = 40;
+        const float cx = 23f, cy = 17f, r = 14.5f, thick = 2.4f, dot = 2.4f;
+        const int steps = 12;
+        List<float[]> segs = new List<float[]>();
+        for (int i = 0; i < steps; i++)
+        {
+            float a0 = Mathf.Deg2Rad * (180f - 90f * i / steps);
+            float a1 = Mathf.Deg2Rad * (180f - 90f * (i + 1) / steps);
+            segs.Add(new float[] { cx + r * Mathf.Cos(a0), cy + r * Mathf.Sin(a0), cx + r * Mathf.Cos(a1), cy + r * Mathf.Sin(a1) });
+        }
+        segs.Add(new float[] { cx - r, cy, cx - r, 5f });       // tail along the left edge
+        segs.Add(new float[] { cx, cy + r, 36f, cy + r });      // tail along the top edge
+        Vector2 dotA = new Vector2(cx - r, 4.5f), dotB = new Vector2(37f, cy + r);
+
+        Color[] px = new Color[n * n];
+        Color gold = UITheme.Gold;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float best = 999f;
+                for (int i = 0; i < segs.Count; i++)
+                {
+                    float d = SegDist(x + 0.5f, y + 0.5f, segs[i][0], segs[i][1], segs[i][2], segs[i][3]);
+                    if (d < best) best = d;
+                }
+                float a = Mathf.Clamp01(thick * 0.5f + 0.5f - best);
+                float da = Mathf.Clamp01(0.5f - (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), dotA) - dot));
+                float db = Mathf.Clamp01(0.5f - (Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), dotB) - dot));
+                a = Mathf.Max(a, Mathf.Max(da, db));
+                px[y * n + x] = new Color(gold.r, gold.g, gold.b, a);
+            }
+        return ToTex(n, n, px);
     }
 
     static Texture2D Diamond()

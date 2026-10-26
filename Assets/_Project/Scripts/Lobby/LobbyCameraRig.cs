@@ -66,15 +66,36 @@ public class LobbyCameraRig : MonoBehaviour
         transform.position = pos + shakeOffset;
     }
 
-    /// <summary>dir = -1 go left, +1 go right. Stops at both ends (no wrap).</summary>
+    bool wrapping;
+
+    /// <summary>dir = -1 go left, +1 go right. Past either end it wraps around (Exit to Story, Story to Exit) through a quick fade.</summary>
     public void Step(int dir)
     {
-        if (InputLocked || follow != null) return;
+        if (InputLocked || follow != null || wrapping) return;
         int n = Index + dir;
-        if (n < 0 || n >= StopCount) return;
+        if (n < 0 || n >= StopCount)
+        {
+            StartCoroutine(WrapRoutine(n < 0 ? StopCount - 1 : 0));
+            return;
+        }
         Index = n;
         targetX = n * StopSpacing;
         StopChanged?.Invoke(Index);
+    }
+
+    IEnumerator WrapRoutine(int newIndex)
+    {
+        wrapping = true;
+        InputLocked = true;
+        yield return SceneFader.Instance.Fade(1f, 0.25f);
+        Index = newIndex;
+        targetX = newIndex * StopSpacing;
+        velX = 0f;
+        transform.position = new Vector3(targetX, 0f, -10f);
+        StopChanged?.Invoke(Index);
+        yield return SceneFader.Instance.Fade(0f, 0.25f);
+        InputLocked = false;
+        wrapping = false;
     }
 
     /// <summary>Locks input, then tracks t and zooms to orthographic size 'size' (smaller = closer).</summary>

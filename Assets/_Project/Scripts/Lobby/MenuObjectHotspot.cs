@@ -59,5 +59,10 @@ public class MenuObjectHotspot : Hotspot
         if (glow.activeSelf != want) glow.SetActive(want);
     }
 
-    public override void Click() => LobbyMenu.Open(action);
+    public override void Click()
+    {
+        LobbyUI ui = FindFirstObjectByType<LobbyUI>();
+        if (action == MenuAction.Settings && ui != null) { ui.OpenSettings(); return; }
+        LobbyMenu.Open(action);
+    }
 }

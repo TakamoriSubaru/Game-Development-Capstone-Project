@@ -72,7 +72,7 @@ public class ConfirmPanel : MonoBehaviour
     // Finds a ConfirmPanel in the open scene (even inactive) or builds one on a new overlay canvas.
     public static ConfirmPanel GetOrCreate()
     {
-        ConfirmPanel p = FindFirstObjectByType<ConfirmPanel>(FindObjectsInactive.Include);
+        ConfirmPanel p = FindAnyObjectByType<ConfirmPanel>(FindObjectsInactive.Include);
         if (p != null) return p;
         Canvas c = UIKit.CreateOverlayCanvas("Confirm Canvas", 500);
         return UIKit.CreateConfirmPanel(c.transform);

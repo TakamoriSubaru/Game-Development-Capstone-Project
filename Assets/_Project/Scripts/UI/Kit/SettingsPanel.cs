@@ -57,7 +57,7 @@ public class SettingsPanel : MonoBehaviour
 
     public static SettingsPanel GetOrCreate()
     {
-        SettingsPanel p = FindFirstObjectByType<SettingsPanel>(FindObjectsInactive.Include);
+        SettingsPanel p = FindAnyObjectByType<SettingsPanel>(FindObjectsInactive.Include);
         if (p != null) return p;
         Canvas c = UIKit.CreateOverlayCanvas("Settings Canvas", 400);
         return UIKit.CreateSettingsPanel(c.transform);

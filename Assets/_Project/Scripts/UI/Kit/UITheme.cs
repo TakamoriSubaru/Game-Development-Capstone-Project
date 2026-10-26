@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
 using TMPro;
 
 // Text styles used across the whole game UI.
@@ -66,8 +67,15 @@ public static class UITheme
     public const int FontLabel = 28;
 
     // ---------- Fonts ----------
-    const string CinzelPath = "Fonts/Cinzel SDF";
-    const string NotoPath   = "Fonts/NotoSerif SDF";
+    // Lookup order for each family:
+    //  1. TMP Font Asset (made by menu Oddyseus/Create UI Fonts)
+    //  2. A raw .ttf/.otf in Resources/Fonts -> a dynamic TMP asset is built at runtime
+    //  3. TMP default font (warning is logged once)
+    static readonly string[] CinzelAssets = { "Fonts/Cinzel SDF", "Fonts/Cinzel-Regular SDF", "Fonts/Cinzel-VariableFont_wght SDF" };
+    static readonly string[] NotoAssets   = { "Fonts/NotoSerif SDF", "Fonts/NotoSerif-Regular SDF", "Fonts/NotoSerif-VariableFont_wdth,wght SDF" };
+    static readonly string[] CinzelFiles  = { "Fonts/Cinzel", "Fonts/Cinzel-Regular", "Fonts/Cinzel-VariableFont_wght" };
+    static readonly string[] NotoFiles    = { "Fonts/NotoSerif", "Fonts/NotoSerif-Regular", "Fonts/NotoSerif-VariableFont_wdth,wght" };
+
     static TMP_FontAsset _cinzel, _noto;
     static bool _fontsLoaded, _warned;
 
@@ -76,28 +84,65 @@ public static class UITheme
 
     public static bool FontsInstalled
     {
-        get { return Resources.Load<TMP_FontAsset>(CinzelPath) != null && Resources.Load<TMP_FontAsset>(NotoPath) != null; }
+        get { LoadFonts(); return _cinzelOk && _notoOk; }
     }
 
+    static bool _cinzelOk, _notoOk;
+
     // Call after creating font assets in the editor.
-    public static void ReloadFonts() { _fontsLoaded = false; _cinzel = null; _noto = null; _warned = false; }
+    public static void ReloadFonts()
+    {
+        _fontsLoaded = false; _cinzel = null; _noto = null; _warned = false;
+        _cinzelOk = false; _notoOk = false;
+    }
+
+    static TMP_FontAsset FindFont(string[] assetPaths, string[] filePaths)
+    {
+        for (int i = 0; i < assetPaths.Length; i++)
+        {
+            TMP_FontAsset a = Resources.Load<TMP_FontAsset>(assetPaths[i]);
+            if (a != null) return a;
+        }
+        for (int i = 0; i < filePaths.Length; i++)
+        {
+            Font f = Resources.Load<Font>(filePaths[i]);
+            if (f == null) continue;
+            TMP_FontAsset made = TMP_FontAsset.CreateFontAsset(f, 90, 9, GlyphRenderMode.SDFAA, 1024, 1024,
+                                                               AtlasPopulationMode.Dynamic, true);
+            if (made != null)
+            {
+                made.name = f.name + " SDF (runtime)";
+                return made;
+            }
+        }
+        return null;
+    }
 
     static void LoadFonts()
     {
-        if (_fontsLoaded && (_cinzel != null || _noto != null)) return;
+        if (_fontsLoaded) return;   // load once, even when the result is the fallback
         _fontsLoaded = true;
-        _cinzel = Resources.Load<TMP_FontAsset>(CinzelPath);
-        _noto = Resources.Load<TMP_FontAsset>(NotoPath);
-        TMP_FontAsset fallback = null;
-        if (TMP_Settings.instance != null) fallback = TMP_Settings.defaultFontAsset;
-        if ((_cinzel == null || _noto == null) && !_warned)
+
+        _cinzel = FindFont(CinzelAssets, CinzelFiles);
+        _noto   = FindFont(NotoAssets, NotoFiles);
+        _cinzelOk = _cinzel != null;
+        _notoOk   = _noto != null;
+
+        if (!_cinzelOk || !_notoOk)
         {
-            _warned = true;
-            Debug.LogWarning("[UITheme] Cinzel or Noto Serif font asset not found in Resources/Fonts. " +
-                             "Using the TMP default font. Run menu: Oddyseus/Create UI Fonts.");
+            TMP_FontAsset fallback = TMP_Settings.instance != null ? TMP_Settings.defaultFontAsset : null;
+            if (!_cinzelOk) _cinzel = fallback;
+            if (!_notoOk) _noto = fallback;
+
+            if (!_warned)
+            {
+                _warned = true;
+                Debug.LogWarning("[UITheme] " + (!_cinzelOk ? "Cinzel " : "") + (!_notoOk ? "Noto Serif " : "") +
+                                 "font not found in Resources/Fonts. Using the TMP default font. " +
+                                 "Fix: put Cinzel.ttf / NotoSerif.ttf in Assets/_Project/Resources/Fonts " +
+                                 "or run menu Oddyseus/Create UI Fonts.");
+            }
         }
-        if (_cinzel == null) _cinzel = fallback;
-        if (_noto == null) _noto = fallback;
     }
 
     public static bool IsCinzel(UITextStyle s)
