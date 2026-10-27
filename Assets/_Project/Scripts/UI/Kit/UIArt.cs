@@ -19,12 +19,23 @@ public static class UIArt
         "btn_edge", "btn_edge_hover", "btn_disabled",
         "choice_blue", "choice_blue_hover", "choice_red", "choice_red_hover", "choice_green", "choice_green_hover",
         "glow", "corner", "key_tile", "diamond", "chevron", "chevron_double",
-        "node", "node_glow", "marker", "circle", "knob", "pill", "pointer"
+        "node", "node_glow", "marker", "circle", "knob", "pill", "pointer",
+        // Warm Parchment Gouache skin
+        "pa_panel", "pa_plate", "pa_corner",
+        "pa_btn_terra", "pa_btn_terra_hover", "pa_btn_terra_pressed",
+        "pa_btn_olive", "pa_btn_olive_hover", "pa_btn_olive_pressed", "pa_btn_disabled",
+        "pa_node", "pa_knob", "pa_marker", "pa_pointer", "pa_chevron_double", "pa_dialogue"
     };
 
     static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
 
     public static void ClearCache() { cache.Clear(); }
+
+    /// <summary>True when a real painted PNG exists at Resources/UIKit/<name> (not the code-drawn fallback).</summary>
+    public static bool IsAuthored(string name)
+    {
+        return Resources.Load<Sprite>(ResourcesFolder + name) != null;
+    }
 
     public static Sprite Get(string name)
     {
@@ -56,12 +67,15 @@ public static class UIArt
         {
             case "panel":
             case "panel_cream":
-            case "panel_orn": return new Vector4(40, 40, 40, 40);
-            case "plate": return new Vector4(30, 30, 30, 30);
+            case "panel_orn":
+            case "pa_panel":
+            case "pa_dialogue": return new Vector4(40, 40, 40, 40);
+            case "plate":
+            case "pa_plate": return new Vector4(30, 30, 30, 30);
             case "glow": return new Vector4(40, 40, 40, 40);
             case "pill": return new Vector4(15, 15, 15, 15);
         }
-        if (name.StartsWith("btn_") || name.StartsWith("choice_")) return new Vector4(32, 32, 32, 32);
+        if (name.StartsWith("btn_") || name.StartsWith("pa_btn_") || name.StartsWith("choice_")) return new Vector4(32, 32, 32, 32);
         return Vector4.zero;
     }
 
@@ -137,6 +151,37 @@ public static class UIArt
             case "knob": return Knob();
             case "pill": return Frame(32, 32, false, 16f, 0f, Color.white, Color.white, Color.white, 0f);
             case "pointer": return Pointer();
+
+            // ---- Warm Parchment Gouache ----
+            case "pa_panel":
+                return PFrame(96, 96, 14f, UITheme.ParchmentDeep, UITheme.Parchment, UITheme.Ink, 3f, 0.05f, A(UITheme.Bronze, 0.6f), 7f);
+            case "pa_plate":
+                return PFrame(96, 80, 22f, UITheme.Hex("B5643F"), UITheme.Hex("D88A5E"), UITheme.GoldWarm, 2.5f, 0.04f, A(UITheme.Ink, 0f), 0f);
+            case "pa_corner": return LeafCorner();
+            case "pa_btn_terra":
+                return PFrame(96, 96, 30f, UITheme.Hex("B5643F"), UITheme.Hex("D88A5E"), UITheme.GoldWarm, 3f, 0.04f, A(UITheme.Ink, 0f), 0f);
+            case "pa_btn_terra_hover":
+                return PFrame(96, 96, 30f, UITheme.Hex("E2A743"), UITheme.Hex("F4CB6E"), UITheme.Hex("FFE9B0"), 3f, 0.04f, A(UITheme.Ink, 0f), 0f);
+            case "pa_btn_terra_pressed":
+                return PFrame(96, 96, 30f, UITheme.Hex("7A3D24"), UITheme.TerracottaDark, UITheme.Hex("C9923A"), 3f, 0.04f, A(UITheme.Ink, 0f), 0f);
+            case "pa_btn_olive":
+                return PFrame(96, 96, 30f, UITheme.Hex("587A49"), UITheme.Hex("7BA069"), UITheme.GoldWarm, 3f, 0.04f, A(UITheme.Ink, 0f), 0f);
+            case "pa_btn_olive_hover":
+                return PFrame(96, 96, 30f, UITheme.Hex("6F9660"), UITheme.Hex("93BC82"), UITheme.Hex("FFE9B0"), 3f, 0.04f, A(UITheme.Ink, 0f), 0f);
+            case "pa_btn_olive_pressed":
+                return PFrame(96, 96, 30f, UITheme.Hex("3F5C35"), UITheme.Hex("4F6E43"), UITheme.Hex("C9923A"), 3f, 0.04f, A(UITheme.Ink, 0f), 0f);
+            case "pa_btn_disabled":
+                return PFrame(96, 96, 30f, A(UITheme.Hex("D9CDB4"), 0.85f), A(UITheme.Hex("E6DBC3"), 0.85f), A(UITheme.Hex("A89C84"), 0.9f), 2.5f, 0.03f, A(UITheme.Ink, 0f), 0f);
+            case "pa_node": return PaNode();
+            case "pa_knob": return PaKnob();
+            case "pa_marker": return PaMarker();
+            case "pa_pointer": return PaPointer();
+            case "pa_chevron_double":
+                return Strokes(28, 28, UITheme.Ink, 3f, new float[][]
+                {
+                    new float[]{4,6,11,14}, new float[]{11,14,4,22},
+                    new float[]{14,6,21,14}, new float[]{21,14,14,22}
+                });
         }
         return null;
     }
@@ -452,6 +497,208 @@ public static class UIArt
                 float outer = Mathf.Clamp01(0.5f - d);
                 float inner = Mathf.Clamp01(0.5f - (d + 3f));
                 Color c = Color.Lerp(UITheme.Gold, UITheme.Navy, inner);
+                c.a = outer;
+                px[y * w + x] = c;
+            }
+        return ToTex(w, h, px);
+    }
+
+    // ------------------------------------------------------------------
+    // Warm Parchment Gouache drawing
+    // ------------------------------------------------------------------
+    // Deterministic paper grain, 0..1
+    static float Hash(int x, int y)
+    {
+        unchecked
+        {
+            int h = x * 374761393 + y * 668265263;
+            h = (h ^ (h >> 13)) * 1274126177;
+            return ((h ^ (h >> 16)) & 0xFFFF) / 65535f;
+        }
+    }
+
+    // Rounded frame with a vertical gradient fill, paper grain and an optional thin inner line.
+    static Texture2D PFrame(int w, int h, float radius, Color fillBottom, Color fillTop, Color border, float bw,
+                            float grain, Color innerLine, float innerInset)
+    {
+        Color[] px = new Color[w * h];
+        float hx = w * 0.5f - 1f, hy = h * 0.5f - 1f;
+        for (int y = 0; y < h; y++)
+        {
+            Color fill = Color.Lerp(fillBottom, fillTop, (y + 0.5f) / h);
+            for (int x = 0; x < w; x++)
+            {
+                float cx = x + 0.5f - w * 0.5f, cy = y + 0.5f - h * 0.5f;
+                float d = SdRound(cx, cy, hx, hy, radius);
+                float outer = Mathf.Clamp01(0.5f - d);
+                float inner = Mathf.Clamp01(0.5f - (d + bw));
+
+                float g = (Hash(x, y) - 0.5f) * grain;
+                Color f = new Color(fill.r + g, fill.g + g, fill.b + g, fill.a);
+                if (innerLine.a > 0f)
+                {
+                    float dl = Mathf.Abs(d + bw + innerInset) - 0.7f;
+                    float la = Mathf.Clamp01(0.5f - dl) * innerLine.a;
+                    f = Color.Lerp(f, new Color(innerLine.r, innerLine.g, innerLine.b, f.a), la);
+                }
+
+                Color c = Color.Lerp(border, f, inner);
+                c.a = outer * Mathf.Lerp(border.a, f.a, inner);
+                px[y * w + x] = c;
+            }
+        }
+        return ToTex(w, h, px);
+    }
+
+    // Distance (in pixels, approx.) to a rotated ellipse; negative inside.
+    static float SdLeaf(float px, float py, float cx, float cy, float angle, float ra, float rb)
+    {
+        float dx = px - cx, dy = py - cy;
+        float ca = Mathf.Cos(angle), sa = Mathf.Sin(angle);
+        float lx = dx * ca + dy * sa;
+        float ly = -dx * sa + dy * ca;
+        float k = Mathf.Sqrt((lx * lx) / (ra * ra) + (ly * ly) / (rb * rb));
+        return (k - 1f) * Mathf.Min(ra, rb);
+    }
+
+    // Olive-leaf sprig for the panel corners (40x40, top-left version; AddCorners mirrors it).
+    static Texture2D LeafCorner()
+    {
+        const int n = 40;
+        Vector2 p0 = new Vector2(5f, 34f), p1 = new Vector2(10f, 12f), p2 = new Vector2(33f, 6f);
+        const int steps = 14;
+        Vector2[] pts = new Vector2[steps + 1];
+        for (int i = 0; i <= steps; i++)
+        {
+            float t = i / (float)steps;
+            pts[i] = (1f - t) * (1f - t) * p0 + 2f * (1f - t) * t * p1 + t * t * p2;
+        }
+
+        // leaves: index on the stem, side (+1 / -1)
+        int[] leafAt = { 3, 5, 8, 10, 13 };
+        float[] leafSide = { 1f, -1f, 1f, -1f, 1f };
+        int ln = leafAt.Length;
+        Vector2[] lc = new Vector2[ln];
+        float[] la = new float[ln];
+        for (int i = 0; i < ln; i++)
+        {
+            int k = leafAt[i];
+            Vector2 tan = (pts[Mathf.Min(k + 1, steps)] - pts[Mathf.Max(k - 1, 0)]).normalized;
+            float ang = Mathf.Atan2(tan.y, tan.x) + leafSide[i] * 0.85f;
+            la[i] = ang;
+            lc[i] = pts[k] + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * 4.2f;
+        }
+
+        Color olive = UITheme.Olive, ink = UITheme.Ink;
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+        {
+            for (int x = 0; x < n; x++)
+            {
+                float fx = x + 0.5f, fy = y + 0.5f;
+                float stem = 999f;
+                for (int i = 0; i < steps; i++)
+                {
+                    float d = SegDist(fx, fy, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
+                    if (d < stem) stem = d;
+                }
+                float leaf = 999f;
+                for (int i = 0; i < ln; i++)
+                {
+                    float d = SdLeaf(fx, fy, lc[i].x, lc[i].y, la[i], 5.4f, 2.5f);
+                    if (d < leaf) leaf = d;
+                }
+                float leafFill = Mathf.Clamp01(0.5f - leaf);
+                float leafEdge = Mathf.Clamp01(0.5f - (leaf + 0.9f));
+                float stemA = Mathf.Clamp01(0.8f + 0.5f - stem);   // 1.6 px wide stem
+
+                Color c = Color.Lerp(ink, olive, leafEdge);        // ink outline, olive inside
+                float a = leafFill;
+                c = Color.Lerp(c, ink, stemA);
+                a = Mathf.Max(a, stemA);
+                px[y * n + x] = new Color(c.r, c.g, c.b, a);
+            }
+        }
+        return ToTex(n, n, px);
+    }
+
+    // Round node, drawn in grey so it can be tinted (olive normally, gold when active).
+    static Texture2D PaNode()
+    {
+        int n = 64;
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float cx = x + 0.5f - n * 0.5f, cy = y + 0.5f - n * 0.5f;
+                float d = Mathf.Sqrt(cx * cx + cy * cy) - 27f;
+                float outer = Mathf.Clamp01(0.5f - d);
+                float inner = Mathf.Clamp01(0.5f - (d + 3.5f));
+                float shade = Mathf.Lerp(0.82f, 1f, (y + 0.5f) / n);
+                float g = (Hash(x, y) - 0.5f) * 0.05f;
+                Color fill = new Color(shade + g, shade + g, shade + g, 1f);
+                Color c = Color.Lerp(new Color(0.32f, 0.32f, 0.32f, 1f), fill, inner);
+                c.a = outer;
+                px[y * n + x] = c;
+            }
+        return ToTex(n, n, px);
+    }
+
+    static Texture2D PaKnob()
+    {
+        int n = 64;
+        Color[] px = new Color[n * n];
+        float half = n * 0.5f;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float cx = x + 0.5f - half, cy = y + 0.5f - half;
+                float d = Mathf.Sqrt(cx * cx + cy * cy) - (half - 1f);
+                float outer = Mathf.Clamp01(0.5f - d);
+                float inner = Mathf.Clamp01(0.5f - (d + 7f));
+                Color fill = Color.Lerp(UITheme.GoldWarm, UITheme.GoldLight, (y + 0.5f) / n);
+                Color c = Color.Lerp(UITheme.Ink, fill, inner);
+                c.a = outer;
+                px[y * n + x] = c;
+            }
+        return ToTex(n, n, px);
+    }
+
+    static Texture2D PaMarker()
+    {
+        int n = 48;
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float cx = x + 0.5f - n * 0.5f, cy = y + 0.5f - n * 0.5f;
+                float d = Mathf.Sqrt(cx * cx + cy * cy) - 22.5f;
+                float outer = Mathf.Clamp01(0.5f - d);
+                float inner = Mathf.Clamp01(0.5f - (d + 3f));
+                Color fill = Color.Lerp(UITheme.Hex("B5643F"), UITheme.Hex("D88A5E"), (y + 0.5f) / n);
+                Color c = Color.Lerp(UITheme.GoldWarm, fill, inner);
+                float bar = SegDist(x + 0.5f, y + 0.5f, 24f, 21f, 24f, 33f) - 3f;
+                float dot = SegDist(x + 0.5f, y + 0.5f, 24f, 13f, 24f, 13f) - 3.4f;
+                float mark = Mathf.Clamp01(0.5f - Mathf.Min(bar, dot));
+                c = Color.Lerp(c, UITheme.Paper, mark);
+                c.a = outer;
+                px[y * n + x] = c;
+            }
+        return ToTex(n, n, px);
+    }
+
+    static Texture2D PaPointer()
+    {
+        int w = 28, h = 20;
+        Color[] px = new Color[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float cx = x + 0.5f - w * 0.5f, ty = y + 0.5f;
+                float d = (Mathf.Abs(cx) - 0.7f * ty) / 1.2207f;
+                float outer = Mathf.Clamp01(0.5f - d);
+                float inner = Mathf.Clamp01(0.5f - (d + 3f));
+                Color c = Color.Lerp(UITheme.GoldWarm, UITheme.Hex("D88A5E"), inner);
                 c.a = outer;
                 px[y * w + x] = c;
             }

@@ -14,13 +14,15 @@ public enum UITextStyle
 }
 
 /// <summary>
-/// Night Sea and Bronze theme: colors, sizes, fonts. Static, no scene object needed.
+/// UI theme: colors, sizes, fonts. Static, no scene object needed.
+/// Contains the old Night Sea palette (kept so every older screen still compiles)
+/// AND the Warm Parchment Gouache palette used by the new kit (UIArt, UIKit, ThemedButton, CompassIndicator).
 /// Fonts are loaded from Resources/Fonts ("Cinzel SDF", "NotoSerif SDF").
 /// If they are missing, the TMP default font is used (no crash).
 /// </summary>
 public static class UITheme
 {
-    // ---------- Palette ----------
+    // ---------- Palette: old Night Sea (kept for screens not reworked yet) ----------
     public static readonly Color Navy       = Hex("0B2A4A");
     public static readonly Color NavyDeep   = Hex("07203A");
     public static readonly Color Bronze     = Hex("B8863B");
@@ -34,6 +36,19 @@ public static class UITheme
     public static readonly Color Dim        = new Color(0.02f, 0.07f, 0.13f, 0.75f);
     public static readonly Color TextDark   = Hex("2B1B0E");   // dark text on cream cards / gold buttons
     public static readonly Color Disabled   = Hex("7C8AA0");
+
+    // ---------- Palette: Warm Parchment Gouache (new kit) ----------
+    public static readonly Color Parchment     = Hex("F7EEDC");   // panels
+    public static readonly Color ParchmentDeep = Hex("E6D3AE");   // panel shading / inner frames
+    public static readonly Color Paper         = Hex("FBF3E0");   // lightest paper, text on terracotta / olive
+    public static readonly Color ParchDisabled = Hex("CDBFA4");   // disabled button
+    public static readonly Color ParchTrack    = Hex("D9C7A3");   // slider track
+    public static readonly Color Ink           = Hex("4B3B2E");   // text, outlines, icons
+    public static readonly Color Terracotta    = Hex("C97A52");   // primary buttons
+    public static readonly Color TerracottaDark= Hex("A35F3D");   // pressed / outline of terracotta
+    public static readonly Color Olive         = Hex("6B8F5B");   // secondary buttons, nodes
+    public static readonly Color GoldWarm      = Hex("EBB24E");   // accent, selected, outlines
+    public static readonly Color GoldLight     = Hex("F6D58A");   // hover highlight
 
     // Card and choice style (from 19_relic_choice and 20_event_quiet_cove)
     public static readonly Color CardCream   = Hex("F3E6C8");

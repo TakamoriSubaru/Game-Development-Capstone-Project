@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public enum MenuAction { Almanac, Settings }
@@ -19,6 +20,9 @@ public class MenuObjectHotspot : Hotspot
     public GameObject glow;                  // the hover glow (child object)
     public float fadeSpeed = 8f;             // higher = glow appears faster
     [Range(0f, 0.2f)] public float hoverPop = 0.04f;   // object grows this much while hovered (0 = off)
+    [Header("Spin (optional)")]
+    public Transform spinTarget;             // e.g. the ship's wheel sprite: spins once, then the menu opens
+    public float spinSeconds = 0.6f;
 
     public override string Label => string.IsNullOrEmpty(label) ? action.ToString() : label;
 
@@ -59,7 +63,33 @@ public class MenuObjectHotspot : Hotspot
         if (glow.activeSelf != want) glow.SetActive(want);
     }
 
+    bool spinning;
+
     public override void Click()
+    {
+        if (spinning) return;
+        if (spinTarget != null) { StartCoroutine(SpinThenOpen()); return; }
+        OpenMenu();
+    }
+
+    IEnumerator SpinThenOpen()
+    {
+        spinning = true;
+        Quaternion start = spinTarget.localRotation;
+        float t = 0f;
+        while (t < spinSeconds)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / spinSeconds));
+            spinTarget.localRotation = start * Quaternion.Euler(0f, 0f, -360f * k);
+            yield return null;
+        }
+        spinTarget.localRotation = start;
+        spinning = false;
+        OpenMenu();
+    }
+
+    void OpenMenu()
     {
         LobbyUI ui = FindAnyObjectByType<LobbyUI>();
         if (action == MenuAction.Settings && ui != null) { ui.OpenSettings(); return; }

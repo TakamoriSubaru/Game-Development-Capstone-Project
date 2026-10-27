@@ -87,13 +87,15 @@ public static class UIKit
     // Greek-key corner brackets. One sprite, flipped with negative scale.
     static void AddCorners(Transform parent, float inset)
     {
+        // Painted pa_panel / pa_dialogue PNGs already have olive sprigs in their corners; don't double them.
+        if (UIArt.IsAuthored("pa_panel")) return;
         string[] names = { "TL", "TR", "BL", "BR" };
         Vector2[] anchors = { new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, 0), new Vector2(1, 0) };
         float[] px = { 1f, -1f, 1f, -1f };
         float[] py = { -1f, -1f, 1f, 1f };
         for (int i = 0; i < 4; i++)
         {
-            Image img = NewImage("Corner " + names[i] + " (replace sprite)", parent, "corner", Image.Type.Simple, Color.white, false);
+            Image img = NewImage("Corner " + names[i] + " (replace sprite)", parent, "pa_corner", Image.Type.Simple, Color.white, false);
             Place(img.rectTransform, anchors[i], Center, new Vector2(px[i] * inset, py[i] * inset), new Vector2(40f, 40f));
             img.rectTransform.localScale = new Vector3(px[i], py[i], 1f);
         }
@@ -203,13 +205,13 @@ public static class UIKit
 
         Image glow = NewImage("Glow", rt, "glow", Image.Type.Sliced, Color.white, false);
         Stretch(glow.rectTransform, 20f);
-        Image frame = NewImage("Frame (replace sprite)", rt, "btn_edge", Image.Type.Sliced, Color.white, true);
+        Image frame = NewImage("Frame (replace sprite)", rt, "pa_btn_terra", Image.Type.Sliced, Color.white, true);
         Stretch(frame.rectTransform);
-        TMP_Text label = CreateText(rt, "Label", text, UITextStyle.Label, UITheme.Cream, TextAlignmentOptions.Center);
+        TMP_Text label = CreateText(rt, "Label", text, UITextStyle.Label, UITheme.Paper, TextAlignmentOptions.Center);
         Stretch(label.rectTransform);
         label.rectTransform.offsetMin = new Vector2(64f, 0f);
         label.rectTransform.offsetMax = new Vector2(-64f, 0f);
-        Image chev = NewImage("Chevron Icon (replace sprite)", rt, "chevron", Image.Type.Simple, UITheme.Gold, false);
+        Image chev = NewImage("Chevron Icon (replace sprite)", rt, "chevron", Image.Type.Simple, UITheme.Paper, false);
         chev.rectTransform.sizeDelta = new Vector2(28f, 28f);
 
         EdgeChevronButton b = rt.gameObject.AddComponent<EdgeChevronButton>();
@@ -234,7 +236,7 @@ public static class UIKit
         Image hit = NewImage("Hit Area", rt, null, Image.Type.Simple, new Color(0f, 0f, 0f, 0f), true);
         Stretch(hit.rectTransform);
 
-        Image track = NewImage("Track (replace sprite)", rt, "pill", Image.Type.Sliced, UITheme.SliderTrack, false);
+        Image track = NewImage("Track (replace sprite)", rt, "pill", Image.Type.Sliced, UITheme.ParchTrack, false);
         RectTransform tr = track.rectTransform;
         tr.anchorMin = new Vector2(0f, 0.5f);
         tr.anchorMax = new Vector2(1f, 0.5f);
@@ -249,7 +251,7 @@ public static class UIKit
         fillArea.offsetMin = new Vector2(0f, -UITheme.SliderTrackSize.y * 0.5f);
         fillArea.offsetMax = new Vector2(0f, UITheme.SliderTrackSize.y * 0.5f);
 
-        Image fill = NewImage("Fill (replace sprite)", fillArea, "pill", Image.Type.Sliced, UITheme.SliderFill, false);
+        Image fill = NewImage("Fill (replace sprite)", fillArea, "pill", Image.Type.Sliced, UITheme.Terracotta, false);
         fill.rectTransform.anchorMin = Vector2.zero;
         fill.rectTransform.anchorMax = Vector2.one;
         fill.rectTransform.offsetMin = Vector2.zero;
@@ -260,7 +262,7 @@ public static class UIKit
         handleArea.offsetMin = new Vector2(UITheme.SliderHandleSize * 0.5f, 0f);
         handleArea.offsetMax = new Vector2(-UITheme.SliderHandleSize * 0.5f, 0f);
 
-        Image knob = NewImage("Knob (replace sprite)", handleArea, "knob", Image.Type.Simple, Color.white, true);
+        Image knob = NewImage("Knob (replace sprite)", handleArea, "pa_knob", Image.Type.Simple, Color.white, true);
         Place(knob.rectTransform, new Vector2(0f, 0.5f), Center, Vector2.zero,
               new Vector2(UITheme.SliderHandleSize, UITheme.SliderHandleSize));
 
@@ -295,15 +297,16 @@ public static class UIKit
         RectTransform rt = NewRect("Dialogue Box", parent);
         rt.sizeDelta = UITheme.DialogueBoxSize;
 
-        Image frame = NewImage("Frame (replace sprite)", rt, "panel", Image.Type.Sliced, Color.white, true);
+        string dlgSprite = UIArt.IsAuthored("pa_dialogue") ? "pa_dialogue" : "pa_panel";
+        Image frame = NewImage("Frame (replace sprite)", rt, dlgSprite, Image.Type.Sliced, Color.white, true);
         Stretch(frame.rectTransform);
-        AddCorners(rt, 26f);
+        if (dlgSprite == "pa_panel") AddCorners(rt, 26f);
 
         RectTransform np = NewRect("NamePlate", rt);
         Place(np, new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(56f, 0f), UITheme.NamePlateSize);
-        Image npImg = NewImage("NamePlate (replace sprite)", np, "plate", Image.Type.Sliced, Color.white, false);
+        Image npImg = NewImage("NamePlate (replace sprite)", np, "pa_plate", Image.Type.Sliced, Color.white, false);
         Stretch(npImg.rectTransform);
-        TMP_Text nameLabel = CreateText(np, "Name", "Name Plate", UITextStyle.Label, UITheme.Cream, TextAlignmentOptions.Center);
+        TMP_Text nameLabel = CreateText(np, "Name", "Name Plate", UITextStyle.Label, UITheme.Paper, TextAlignmentOptions.Center);
         Stretch(nameLabel.rectTransform);
         nameLabel.rectTransform.offsetMin = new Vector2(24f, 0f);
         nameLabel.rectTransform.offsetMax = new Vector2(-24f, 0f);
@@ -312,12 +315,12 @@ public static class UIKit
         nameLabel.fontSizeMax = 28f;
 
         TMP_Text body = CreateText(rt, "Text", "Dialogue text goes here. Up to three lines at 30 px, Noto Serif.",
-                                   UITextStyle.Body, UITheme.Cream, TextAlignmentOptions.TopLeft);
+                                   UITextStyle.Body, UITheme.Ink, TextAlignmentOptions.TopLeft);
         Stretch(body.rectTransform);
         body.rectTransform.offsetMin = new Vector2(64f, 26f);
         body.rectTransform.offsetMax = new Vector2(-100f, -46f);
 
-        Image chevron = NewImage("Continue Chevron (replace sprite)", rt, "chevron_double", Image.Type.Simple, Color.white, false);
+        Image chevron = NewImage("Continue Chevron (replace sprite)", rt, "pa_chevron_double", Image.Type.Simple, Color.white, false);
         Place(chevron.rectTransform, new Vector2(1f, 0f), Center, new Vector2(-48f, 40f),
               new Vector2(UITheme.ContinueChevronSize, UITheme.ContinueChevronSize));
 
@@ -338,13 +341,13 @@ public static class UIKit
         Place(rt, Center, new Vector2(0.5f, 0f), Vector2.zero,
               new Vector2(UITheme.HoverRibbonSize.x, UITheme.HoverRibbonSize.y + UITheme.HoverPointerHeight));
 
-        Image pointer = NewImage("Pointer (replace sprite)", rt, "pointer", Image.Type.Simple, Color.white, false);
+        Image pointer = NewImage("Pointer (replace sprite)", rt, "pa_pointer", Image.Type.Simple, Color.white, false);
         Place(pointer.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), Vector2.zero,
               new Vector2(28f, UITheme.HoverPointerHeight));
-        Image plate = NewImage("Plate (replace sprite)", rt, "plate", Image.Type.Sliced, Color.white, false);
+        Image plate = NewImage("Plate (replace sprite)", rt, "pa_plate", Image.Type.Sliced, Color.white, false);
         Place(plate.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, UITheme.HoverRibbonSize);
 
-        TMP_Text label = CreateText(plate.rectTransform, "Label", "EXIT", UITextStyle.Ribbon, UITheme.Cream, TextAlignmentOptions.Center);
+        TMP_Text label = CreateText(plate.rectTransform, "Label", "EXIT", UITextStyle.Ribbon, UITheme.Paper, TextAlignmentOptions.Center);
         Stretch(label.rectTransform);
         label.rectTransform.offsetMin = new Vector2(30f, 0f);
         label.rectTransform.offsetMax = new Vector2(-30f, 0f);
@@ -365,9 +368,9 @@ public static class UIKit
         RectTransform rt = NewRect("Hotspot Marker", parent);
         rt.sizeDelta = new Vector2(UITheme.MarkerSize, UITheme.MarkerSize);
 
-        Image glow = NewImage("Pulse Glow (replace sprite)", rt, "node_glow", Image.Type.Simple, A(UITheme.Accent, 0f), false);
+        Image glow = NewImage("Pulse Glow (replace sprite)", rt, "node_glow", Image.Type.Simple, A(UITheme.GoldLight, 0f), false);
         Place(glow.rectTransform, Center, Center, Vector2.zero, new Vector2(120f, 120f));
-        Image marker = NewImage("Marker (replace sprite)", rt, "marker", Image.Type.Simple, Color.white, true);
+        Image marker = NewImage("Marker (replace sprite)", rt, "pa_marker", Image.Type.Simple, Color.white, true);
         Stretch(marker.rectTransform);
 
         HotspotMarker m = rt.gameObject.AddComponent<HotspotMarker>();
@@ -384,7 +387,11 @@ public static class UIKit
         RectTransform rt = NewRect("Compass Indicator", parent);
         rt.sizeDelta = UITheme.CompassSize;
 
-        Image line = NewImage("Line (replace sprite)", rt, null, Image.Type.Simple, A(UITheme.Bronze, 0.85f), false);
+        // Parchment strip behind the nodes so the labels stay readable on any scene
+        Image backing = NewImage("Backing (replace sprite)", rt, "pa_panel", Image.Type.Sliced, A(Color.white, 0.95f), false);
+        Stretch(backing.rectTransform);
+
+        Image line = NewImage("Line (replace sprite)", rt, null, Image.Type.Simple, A(UITheme.Ink, 0.6f), false);
         Place(line.rectTransform, Center, Center, new Vector2(0f, 10f), new Vector2(540f, 2f));
 
         string[] names = { "STORY", "LOBBY", "DUNGEON", "EXIT" };
@@ -396,11 +403,11 @@ public static class UIKit
 
         for (int i = 0; i < 4; i++)
         {
-            Image glow = NewImage("Node Glow " + (i + 1) + " (replace sprite)", rt, "node_glow", Image.Type.Simple, A(UITheme.Accent, 0f), false);
+            Image glow = NewImage("Node Glow " + (i + 1) + " (replace sprite)", rt, "node_glow", Image.Type.Simple, A(UITheme.GoldLight, 0f), false);
             Place(glow.rectTransform, Center, Center, new Vector2(xs[i], 10f), new Vector2(130f, 130f));
-            Image node = NewImage("Node " + (i + 1) + " (replace sprite)", rt, "node", Image.Type.Simple, Color.white, false);
+            Image node = NewImage("Node " + (i + 1) + " (replace sprite)", rt, "pa_node", Image.Type.Simple, UITheme.Olive, false);
             Place(node.rectTransform, Center, Center, new Vector2(xs[i], 10f), new Vector2(40f, 40f));
-            TMP_Text label = CreateText(rt, "Label " + (i + 1), names[i], UITextStyle.Ribbon, UITheme.Cream, TextAlignmentOptions.Center);
+            TMP_Text label = CreateText(rt, "Label " + (i + 1), names[i], UITextStyle.Ribbon, UITheme.Ink, TextAlignmentOptions.Center);
             label.fontSize = 20f;
             Place(label.rectTransform, Center, Center, new Vector2(xs[i], -30f), new Vector2(160f, 28f));
             c.nodes[i] = node;
@@ -427,11 +434,11 @@ public static class UIKit
 
         RectTransform panel = NewRect("Panel", root);
         Place(panel, Center, Center, Vector2.zero, UITheme.ConfirmPanelSize);
-        Image frame = NewImage("Frame (replace sprite)", panel, "panel", Image.Type.Sliced, Color.white, true);
+        Image frame = NewImage("Frame (replace sprite)", panel, "pa_panel", Image.Type.Sliced, Color.white, true);
         Stretch(frame.rectTransform);
         AddCorners(panel, 26f);
 
-        TMP_Text q = CreateText(panel, "Question", "Leave the voyage?", UITextStyle.Subtitle, UITheme.Cream, TextAlignmentOptions.Center);
+        TMP_Text q = CreateText(panel, "Question", "Leave the voyage?", UITextStyle.Subtitle, UITheme.Ink, TextAlignmentOptions.Center);
         q.fontSize = 40f;
         q.rectTransform.anchorMin = new Vector2(0f, 0.42f);
         q.rectTransform.anchorMax = new Vector2(1f, 0.92f);
@@ -512,20 +519,20 @@ public static class UIKit
 
         RectTransform panel = NewRect("Panel", root);
         Place(panel, Center, Center, Vector2.zero, UITheme.SettingsPanelSize);
-        Image frame = NewImage("Frame (replace sprite)", panel, "panel", Image.Type.Sliced, Color.white, true);
+        Image frame = NewImage("Frame (replace sprite)", panel, "pa_panel", Image.Type.Sliced, Color.white, true);
         Stretch(frame.rectTransform);
         AddCorners(panel, 28f);
 
         // Header ribbon
         RectTransform hp = NewRect("Header Ribbon", panel);
         Place(hp, new Vector2(0.5f, 1f), Center, Vector2.zero, new Vector2(460f, 76f));
-        Image plate = NewImage("Header Ribbon (replace sprite)", hp, "plate", Image.Type.Sliced, Color.white, false);
+        Image plate = NewImage("Header Ribbon (replace sprite)", hp, "pa_plate", Image.Type.Sliced, Color.white, false);
         Stretch(plate.rectTransform);
         Image keyL = NewImage("Key Ornament L (replace sprite)", hp, "key_tile", Image.Type.Tiled, Color.white, false);
         Place(keyL.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(40f, 0f), new Vector2(64f, 32f));
         Image keyR = NewImage("Key Ornament R (replace sprite)", hp, "key_tile", Image.Type.Tiled, Color.white, false);
         Place(keyR.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-40f, 0f), new Vector2(64f, 32f));
-        TMP_Text title = CreateText(hp, "Title", "SETTINGS", UITextStyle.TitleCaps, UITheme.Cream, TextAlignmentOptions.Center);
+        TMP_Text title = CreateText(hp, "Title", "SETTINGS", UITextStyle.TitleCaps, UITheme.Paper, TextAlignmentOptions.Center);
         title.fontSize = 44f;
         Stretch(title.rectTransform);
         title.rectTransform.offsetMin = new Vector2(100f, 0f);
@@ -535,7 +542,7 @@ public static class UIKit
         ThemedSlider sfx = CreateSettingsRow(panel, "SFX", -15f);
 
         // Divider with diamond
-        Image rule = NewImage("Divider", panel, null, Image.Type.Simple, A(UITheme.Gold, 0.7f), false);
+        Image rule = NewImage("Divider", panel, null, Image.Type.Simple, A(UITheme.Ink, 0.45f), false);
         Place(rule.rectTransform, Center, Center, new Vector2(0f, -125f), new Vector2(800f, 2f));
         Image dia = NewImage("Divider Diamond (replace sprite)", panel, "diamond", Image.Type.Simple, Color.white, false);
         Place(dia.rectTransform, Center, Center, new Vector2(0f, -125f), new Vector2(20f, 20f));
@@ -553,7 +560,7 @@ public static class UIKit
 
     static ThemedSlider CreateSettingsRow(Transform panel, string labelText, float y)
     {
-        TMP_Text label = CreateText(panel, labelText + " Label", labelText, UITextStyle.Body, UITheme.Cream, TextAlignmentOptions.MidlineLeft);
+        TMP_Text label = CreateText(panel, labelText + " Label", labelText, UITextStyle.Body, UITheme.Ink, TextAlignmentOptions.MidlineLeft);
         label.fontSize = 36f;
         Place(label.rectTransform, Center, new Vector2(0f, 0.5f), new Vector2(-390f, y), new Vector2(190f, 50f));
 
@@ -562,7 +569,7 @@ public static class UIKit
         s.name = labelText + " Slider";
         Place(RectOf(s), Center, Center, new Vector2(40f, y), RectOf(s).sizeDelta);
 
-        TMP_Text value = CreateText(panel, labelText + " Value", "70%", UITextStyle.Body, UITheme.Cream, TextAlignmentOptions.MidlineRight);
+        TMP_Text value = CreateText(panel, labelText + " Value", "70%", UITextStyle.Body, UITheme.Ink, TextAlignmentOptions.MidlineRight);
         value.fontSize = 32f;
         Place(value.rectTransform, Center, new Vector2(1f, 0.5f), new Vector2(390f, y), new Vector2(120f, 50f));
         s.valueLabel = value;

@@ -97,10 +97,23 @@ public static class LobbyBuilder
         Vector2 charCenter = Px(900f, 570f);                 // feet near v=810, height 480 background px
         Transform charRoot = Empty("Character_Lobby (stop 1)", hotspots, charCenter);
         Transform model = Empty("Model (put animated character here)", charRoot, Vector2.zero);
-        Cutout("Character Polites (replace sprite)", model, polites, new RectInt(213, 44, 617, 1482),
-               charCenter, new Vector2(0.3239f, 0.3239f), 5);
+        Transform mouthT = null;
+        if (polites != null)
+        {
+            Cutout("Character Polites (replace sprite)", model, polites, new RectInt(213, 44, 617, 1482),
+                   charCenter, new Vector2(0.3239f, 0.3239f), 5);
+        }
+        else
+        {
+            // No character_polites.png yet: simple placeholder (body, head, mouth). Re-run this menu when the PNG exists.
+            Debug.LogWarning("Oddyseus: character_polites.png not found in " + ArtDir + ", using a placeholder Polites.");
+            Spr("PLACEHOLDER_PolitesBody", model, new Vector2(0f, -0.9f), new Vector2(1.6f, 3.4f), new Color(.45f, .3f, .2f), 5);
+            Spr("PLACEHOLDER_PolitesHead", model, new Vector2(0f, 1.5f), new Vector2(1.3f, 1.3f), new Color(.9f, .72f, .58f), 6, true);
+            mouthT = Spr("PLACEHOLDER_PolitesMouth", model, new Vector2(0f, 1.25f), new Vector2(.45f, .08f), new Color(.55f, .1f, .1f), 7).transform;
+        }
         Box(charRoot.gameObject, Vector2.zero, new Vector2(260f * WU, 470f * WU));
         CharacterTalker talker = charRoot.gameObject.AddComponent<CharacterTalker>();
+        talker.mouth = mouthT;
         talker.rig = rig;
         talker.ui = ui;
         talker.model = model;
@@ -121,8 +134,10 @@ public static class LobbyBuilder
         wh.action = MenuAction.Settings;
         wh.label = "Settings";
         wh.hoverPop = 0.03f;
-        wh.glow = Cutout("Glow", wheelT, wheel, new RectInt(106, 58, 1059, 1074),
-                         wheelCenter, new Vector2(0.2389f, 0.2682f), 10);
+        if (wheel != null)
+            wh.glow = Cutout("Glow", wheelT, wheel, new RectInt(106, 58, 1059, 1074),
+                             wheelCenter, new Vector2(0.2389f, 0.2682f), 10);
+        else Debug.LogWarning("Oddyseus: wheel_glow.png not found, the Settings wheel has no hover glow yet.");
 
         // Scroll barrel = Almanac
         Vector2 barrelCenter = Px(397.5f, 568.5f);
@@ -132,8 +147,10 @@ public static class LobbyBuilder
         bh.action = MenuAction.Almanac;
         bh.label = "Almanac";
         bh.hoverPop = 0.03f;
-        bh.glow = Cutout("Glow", barrelT, scrolls, new RectInt(305, 66, 606, 1098),
-                         barrelCenter, new Vector2(0.185f, 0.185f), 10);
+        if (scrolls != null)
+            bh.glow = Cutout("Glow", barrelT, scrolls, new RectInt(305, 66, 606, 1098),
+                             barrelCenter, new Vector2(0.185f, 0.185f), 10);
+        else Debug.LogWarning("Oddyseus: scrolls_glow.png not found, the Almanac barrel has no hover glow yet.");
 
         // ===== STOPS 0, 2, 3: exactly the placeholder props SceneBuilder builds today =====
         // ===== STOP 0 (x=0): story window =====
@@ -240,6 +257,7 @@ public static class LobbyBuilder
     static GameObject Cutout(string name, Transform parent, Sprite sprite, RectInt box,
                              Vector2 targetWorld, Vector2 bgPxPerSpritePx, int order)
     {
+        if (sprite == null) return null;
         float w = sprite.rect.width, h = sprite.rect.height;
         float cx = box.x + box.width * 0.5f, cy = box.y + box.height * 0.5f;
         float sx = bgPxPerSpritePx.x * WU, sy = bgPxPerSpritePx.y * WU;     // world units per sprite pixel

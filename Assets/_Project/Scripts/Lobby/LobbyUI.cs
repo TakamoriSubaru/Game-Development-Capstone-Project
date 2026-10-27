@@ -143,6 +143,7 @@ public class LobbyUI : MonoBehaviour
         Hotspot[] all = FindObjectsByType<Hotspot>();
         for (int i = 0; i < all.Length; i++)
         {
+            if (!all[i].ShowMarker) continue;
             Collider2D col = all[i].GetComponent<Collider2D>();
             if (col == null) col = all[i].GetComponentInChildren<Collider2D>();
             if (col == null) continue;

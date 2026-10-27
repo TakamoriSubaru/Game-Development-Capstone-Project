@@ -8,6 +8,8 @@ public abstract class Hotspot : MonoBehaviour
 {
     public bool IsHovered { get; private set; }
     public virtual string Label => gameObject.name;
+    /// <summary>False = no pulsing "!" marker over this hotspot (the hover ribbon still works).</summary>
+    public virtual bool ShowMarker => true;
 
     public void SetHovered(bool value)
     {

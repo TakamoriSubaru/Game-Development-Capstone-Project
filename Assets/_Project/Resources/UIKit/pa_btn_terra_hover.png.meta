@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: df62ed22e4f64baada2fc52fe18dd1e2
+guid: 7c287183d69664535a03907fd2430019
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2196358231511178990
-    second: scrolls_glow_0
+      213: 1772441460578683975
+    second: pa_btn_terra_hover_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,13 +46,13 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 100
-  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spritePixelsToUnits: 200
+  spriteBorder: {x: 64, y: 44, z: 64, w: 44}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -75,7 +75,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: scrolls_glow_0
+      name: pa_btn_terra_hover_0
       rect:
         serializedVersion: 2
-        x: 299
-        y: 83
-        width: 617
-        height: 1112
+        x: 1
+        y: 1
+        width: 382
+        height: 126
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: eee9abcbc280b7e10800000000000000
-      internalID: 2196358231511178990
+      spriteID: 74c87fa1e1af89810800000000000000
+      internalID: 1772441460578683975
       vertices: []
       indices: 
       edges: []
@@ -138,7 +138,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -147,8 +147,7 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable:
-      scrolls_glow_0: 2196358231511178990
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

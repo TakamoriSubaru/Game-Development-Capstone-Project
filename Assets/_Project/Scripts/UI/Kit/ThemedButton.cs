@@ -5,9 +5,9 @@ using TMPro;
 
 public enum ThemedButtonStyle
 {
-    Primary,     // gold: navy with gold border, fills gold on hover
-    Secondary,   // navy with blue border, fills blue on hover
-    Edge,        // navy with gold border, white-blue border + blue glow on hover
+    Primary,     // terracotta pill with a gold outline, turns amber on hover
+    Secondary,   // olive pill with a gold outline
+    Edge,        // terracotta pill used for the screen-edge buttons
     ChoiceBlue,  // event choice rows (20_event_quiet_cove)
     ChoiceRed,
     ChoiceGreen
@@ -55,14 +55,14 @@ public class ThemedButton : Button
         switch (style)
         {
             case ThemedButtonStyle.Secondary:
-                n = "btn_secondary"; h = "btn_secondary_hover"; p = "btn_secondary_pressed";
-                labelNormal = UITheme.Cream; labelHover = Color.white; labelPressed = UITheme.BlueLight;
-                glowColor = UITheme.Hex("7FC4FF");
+                n = "pa_btn_olive"; h = "pa_btn_olive_hover"; p = "pa_btn_olive_pressed";
+                labelNormal = UITheme.Paper; labelHover = UITheme.Paper; labelPressed = UITheme.Paper;
+                glowColor = UITheme.GoldLight;
                 break;
             case ThemedButtonStyle.Edge:
-                n = "btn_edge"; h = "btn_edge_hover"; p = "btn_edge_hover";
-                labelNormal = UITheme.Cream; labelHover = Color.white; labelPressed = Color.white;
-                glowColor = UITheme.Hex("7FC4FF");
+                n = "pa_btn_terra"; h = "pa_btn_terra_hover"; p = "pa_btn_terra_pressed";
+                labelNormal = UITheme.Paper; labelHover = UITheme.Ink; labelPressed = UITheme.Paper;
+                glowColor = UITheme.GoldLight;
                 break;
             case ThemedButtonStyle.ChoiceBlue:
                 n = "choice_blue"; h = "choice_blue_hover"; p = "choice_blue_hover";
@@ -80,12 +80,12 @@ public class ThemedButton : Button
                 glowColor = UITheme.Gold;
                 break;
             default:
-                n = "btn_primary"; h = "btn_primary_hover"; p = "btn_primary_pressed";
-                labelNormal = UITheme.Gold; labelHover = UITheme.TextDark; labelPressed = UITheme.TextDark;
-                glowColor = UITheme.Gold;
+                n = "pa_btn_terra"; h = "pa_btn_terra_hover"; p = "pa_btn_terra_pressed";
+                labelNormal = UITheme.Paper; labelHover = UITheme.Ink; labelPressed = UITheme.Paper;
+                glowColor = UITheme.GoldLight;
                 break;
         }
-        labelDisabled = UITheme.Disabled;
+        labelDisabled = UITheme.ParchDisabled;
 
         if (frame != null)
         {
@@ -100,7 +100,7 @@ public class ThemedButton : Button
         ss.highlightedSprite = UIArt.Get(h);
         ss.selectedSprite = UIArt.Get(h);
         ss.pressedSprite = UIArt.Get(p);
-        ss.disabledSprite = UIArt.Get("btn_disabled");
+        ss.disabledSprite = UIArt.Get("pa_btn_disabled");
         spriteState = ss;
 
         Navigation nav = new Navigation();

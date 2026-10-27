@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: eeaf72dfb1430e4f0bf7a31e16697212
+guid: 46a234d6b7f08e0fea05ddafb123f63c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 897316373756627435
-    second: wheel_glow_0
+      213: -4239943816218108686
+    second: prop_fire_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: wheel_glow_0
+      name: prop_fire_0
       rect:
         serializedVersion: 2
-        x: 102
-        y: 88
-        width: 1069
-        height: 1083
+        x: 3
+        y: 0
+        width: 847
+        height: 859
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: be9c7ecdc78e37c00800000000000000
-      internalID: 897316373756627435
+      spriteID: 2fc94b63091b825c0800000000000000
+      internalID: -4239943816218108686
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      wheel_glow_0: 897316373756627435
+      prop_fire_0: -4239943816218108686
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
