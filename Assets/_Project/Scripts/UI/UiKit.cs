@@ -1,0 +1,386 @@
+using System;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using Oddyseus.Core;
+
+namespace Oddyseus.UI
+{
+    // Tombol bergambar: simpan warna dasar dan label supaya SetEnabled bisa meredupkan keduanya.
+    public class UiBtn : MonoBehaviour
+    {
+        public Image Img;
+        public Text Label;
+        public Color Tint = Color.white;
+    }
+
+    // Kartu Pack (gulungan): hover = ganti sprite, ditekan = sedikit mengecil.
+    public class ScrollCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
+    {
+        public Image Img;
+        public Sprite Normal, Hover;
+        bool over, down;
+
+        void Apply()
+        {
+            if (Hover != null) Img.sprite = over ? Hover : Normal;
+            transform.localScale = down ? new Vector3(0.97f, 0.97f, 1f) : Vector3.one;
+        }
+        public void OnPointerEnter(PointerEventData e) { over = true; Apply(); }
+        public void OnPointerExit(PointerEventData e) { over = false; down = false; Apply(); }
+        public void OnPointerDown(PointerEventData e) { down = true; Apply(); }
+        public void OnPointerUp(PointerEventData e) { down = false; Apply(); }
+        void OnDisable() { over = false; down = false; if (Img != null) { Img.sprite = Normal; transform.localScale = Vector3.one; } }
+    }
+
+    // Deretan tab (Legends/Costumes, Floor 1..4, ...) pakai sprite tab_selected / tab_unselected.
+    // Hover, pressed, dan disabled lewat ColorTint karena aset tab hanya punya dua sprite.
+    public class TabBar
+    {
+        public readonly RectTransform Root;
+        readonly Image[] imgs;
+        readonly Text[] labels;
+        readonly Action<int> onChange;
+        public int Selected { get; private set; }
+
+        public TabBar(Transform parent, string[] names, float x0, float y0, float x1, float y1, Action<int> onChange, int fontSize = 22)
+        {
+            this.onChange = onChange;
+            Root = UIFactory.NewRect(parent, "Tabs");
+            UIFactory.Stretch(Root, x0, y0, x1, y1);
+            int n = names.Length;
+            imgs = new Image[n];
+            labels = new Text[n];
+            float w = 1f / n;
+            for (int i = 0; i < n; i++)
+            {
+                int k = i;
+                var img = Ui.Sliced(Root, "Tab" + i, "buttons/tab_unselected", i * w + 0.004f, 0f, (i + 1) * w - 0.004f, 1f, 0.5f);
+                img.raycastTarget = true;
+                var b = img.gameObject.AddComponent<Button>();
+                b.targetGraphic = img;
+                b.navigation = new Navigation { mode = Navigation.Mode.None };
+                var cb = b.colors;
+                cb.normalColor = Color.white;
+                cb.highlightedColor = new Color(1f, 0.95f, 0.82f, 1f);
+                cb.pressedColor = new Color(0.8f, 0.7f, 0.56f, 1f);
+                cb.selectedColor = Color.white;
+                cb.disabledColor = new Color(0.6f, 0.6f, 0.6f, 0.6f);
+                cb.fadeDuration = 0.08f;
+                b.colors = cb;
+                b.onClick.AddListener(() => Select(k, true));
+                imgs[i] = img;
+                labels[i] = Ui.Txt(img.transform, names[i], fontSize, Theme.DarkBrown, TextAnchor.MiddleCenter, 0.06f, 0.08f, 0.94f, 0.92f, true);
+            }
+            Selected = -1;
+        }
+
+        public void Select(int i, bool notify)
+        {
+            Selected = i;
+            for (int k = 0; k < imgs.Length; k++)
+            {
+                imgs[k].sprite = UISprites.Get(k == i ? "buttons/tab_selected" : "buttons/tab_unselected");
+                labels[k].color = k == i ? Theme.DarkBrown : Theme.Muted;
+            }
+            if (notify && onChange != null) onChange(i);
+        }
+    }
+
+    // Kumpulan pembuat widget bergambar. Semua posisi = anchor 0..1 relatif terhadap induk (sama seperti UIFactory).
+    public static class Ui
+    {
+        // ---------- dasar ----------
+
+        // Kotak 16:9 terbesar yang muat di layar. Semua isi layar dibangun di dalamnya sehingga tata letak sama
+        // di 16:9 dan tidak pecah di rasio lain (latar tetap memenuhi layar).
+        public static RectTransform SafeArea(Transform canvas)
+        {
+            var rt = UIFactory.NewRect(canvas, "SafeArea");
+            UIFactory.Stretch(rt, 0f, 0f, 1f, 1f);
+            var f = rt.gameObject.AddComponent<AspectRatioFitter>();
+            f.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            f.aspectRatio = 16f / 9f;
+            return rt;
+        }
+
+        public static Image Pic(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1, bool preserve = true)
+        {
+            var rt = UIFactory.NewRect(parent, name);
+            UIFactory.Stretch(rt, x0, y0, x1, y1);
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = UISprites.Get(sprite);
+            img.preserveAspect = preserve;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        // Gambar yang selalu pas di dalam kotak dengan rasio aslinya (rata tengah). Cocok untuk chip, ribbon, gulungan.
+        // Anak-anaknya memakai anchor relatif terhadap gambar itu sendiri, jadi teks tidak bergeser.
+        public static Image FitPic(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1)
+        {
+            var box = UIFactory.NewRect(parent, name + "Box");
+            UIFactory.Stretch(box, x0, y0, x1, y1);
+            var rt = UIFactory.NewRect(box, name);
+            UIFactory.Stretch(rt, 0f, 0f, 1f, 1f);
+            var s = UISprites.Get(sprite);
+            var fit = rt.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fit.aspectRatio = s != null ? s.rect.width / s.rect.height : 1f;
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = s;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        // Frame 9-slice. borderScale < 1 mengecilkan dekorasi sudut (border asli dihitung di UIAssetImporter).
+        public static Image Sliced(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1, float borderScale)
+        {
+            var rt = UIFactory.NewRect(parent, name);
+            UIFactory.Stretch(rt, x0, y0, x1, y1);
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = UISprites.Get(sprite);
+            img.type = Image.Type.Sliced;
+            img.pixelsPerUnitMultiplier = borderScale;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        public static Image Panel9(Transform parent, string name, float x0, float y0, float x1, float y1, float borderScale = 0.5f)
+        {
+            return Sliced(parent, name, "frames/frame_panel_large", x0, y0, x1, y1, borderScale);
+        }
+
+        public static Image Solid(Transform parent, string name, Color c, float x0, float y0, float x1, float y1)
+        {
+            var rt = UIFactory.NewRect(parent, name);
+            UIFactory.Stretch(rt, x0, y0, x1, y1);
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = UISprites.White;
+            img.color = c;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        // Teks asli (tidak pernah dipanggang ke gambar). title = Cinzel bold, selain itu EB Garamond.
+        public static Text Txt(Transform parent, string text, int size, Color color, TextAnchor align,
+                               float x0, float y0, float x1, float y1, bool title = false)
+        {
+            var t = UIFactory.Label(parent, text, size, color, align, x0, y0, x1, y1);
+            if (title)
+            {
+                var f = UISprites.TitleFont;
+                if (f != null) t.font = f;
+                t.fontStyle = FontStyle.Bold;
+            }
+            return t;
+        }
+
+        // ---------- tombol ----------
+
+        // Tombol pill: set = "parchment" | "terracotta" | "alt". Empat state (normal, hover, pressed, disabled) lewat SpriteSwap.
+        // tint dipakai untuk tombol emas (set parchment diwarnai emas).
+        public static Button Pill(Transform parent, string name, string label, string set, Color tint,
+                                  float x0, float y0, float x1, float y1, Action onClick, int fontSize = 22, float borderScale = 0.55f)
+        {
+            string p = "buttons/btn_" + set + "_";
+            var img = Sliced(parent, name, p + "normal", x0, y0, x1, y1, borderScale);
+            img.color = tint;
+            img.raycastTarget = true;
+            var b = img.gameObject.AddComponent<Button>();
+            b.targetGraphic = img;
+            b.transition = Selectable.Transition.SpriteSwap;
+            b.spriteState = new SpriteState
+            {
+                highlightedSprite = UISprites.Get(p + "hover"),
+                pressedSprite = UISprites.Get(p + "pressed"),
+                selectedSprite = UISprites.Get(p + "normal"),
+                disabledSprite = UISprites.Get(p + "disabled"),
+            };
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            if (onClick != null) b.onClick.AddListener(() => onClick());
+            var t = Txt(img.transform, label, fontSize, Theme.DarkBrown, TextAnchor.MiddleCenter, 0.08f, 0.12f, 0.92f, 0.88f, true);
+            var meta = img.gameObject.AddComponent<UiBtn>();
+            meta.Img = img; meta.Label = t; meta.Tint = tint;
+            return b;
+        }
+
+        public static Button Pill(Transform parent, string name, string label, string set,
+                                  float x0, float y0, float x1, float y1, Action onClick, int fontSize = 22)
+        {
+            return Pill(parent, name, label, set, Color.white, x0, y0, x1, y1, onClick, fontSize);
+        }
+
+        public static readonly Color GoldTint = new Color(0.98f, 0.80f, 0.30f, 1f);
+
+        public static void SetEnabled(Button b, bool on)
+        {
+            b.interactable = on;
+            var m = b.GetComponent<UiBtn>();
+            if (m == null) return;
+            m.Img.color = on ? m.Tint : Color.Lerp(m.Tint, new Color(0.62f, 0.58f, 0.54f, 1f), 0.65f);
+            m.Label.color = on ? Theme.DarkBrown : Theme.Disabled;
+        }
+
+        // Tombol dari satu sprite (menu kiri hub, kartu, slot). Hover/pressed/disabled lewat ColorTint.
+        public static Button TintButton(Image img, Action onClick)
+        {
+            img.raycastTarget = true;
+            var b = img.gameObject.AddComponent<Button>();
+            b.targetGraphic = img;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            var cb = b.colors;
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(1f, 0.96f, 0.84f, 1f);
+            cb.pressedColor = new Color(0.8f, 0.7f, 0.55f, 1f);
+            cb.selectedColor = Color.white;
+            cb.disabledColor = new Color(0.65f, 0.65f, 0.65f, 0.75f);
+            cb.fadeDuration = 0.08f;
+            b.colors = cb;
+            if (onClick != null) b.onClick.AddListener(() => onClick());
+            return b;
+        }
+
+        // Tombol menu hub: frame_menu_button + ikon + judul + subjudul (semuanya teks asli).
+        public static Button MenuButton(Transform parent, string name, string icon, string title, string subtitle,
+                                        float x0, float y0, float x1, float y1, Action onClick)
+        {
+            var img = Sliced(parent, name, "frames/frame_menu_button", x0, y0, x1, y1, 0.6f);
+            var b = TintButton(img, onClick);
+            Pic(img.transform, "Icon", icon, 0.045f, 0.12f, 0.20f, 0.88f);
+            Txt(img.transform, title, 24, Theme.DarkBrown, TextAnchor.LowerLeft, 0.24f, 0.46f, 0.92f, 0.92f, true);
+            Txt(img.transform, subtitle, 16, Theme.Muted, TextAnchor.UpperLeft, 0.24f, 0.08f, 0.92f, 0.50f);
+            return b;
+        }
+
+        // ---------- bar ----------
+
+        // Bar progres: track bergambar + isi emas yang dihitung di kode (aset "filled" sudah mengandung isi tetap).
+        public static Image ProgressBar(Transform parent, float fraction, float x0, float y0, float x1, float y1, float borderScale = 0.4f)
+        {
+            var track = Sliced(parent, "Bar", "bars/progress_track_empty", x0, y0, x1, y1, borderScale);
+            var inner = UIFactory.NewRect(track.transform, "Inner");
+            UIFactory.Stretch(inner, 0.12f, 0.30f, 0.88f, 0.70f);
+            var fill = Solid(inner, "Fill", Theme.Gold, 0f, 0f, Mathf.Clamp01(fraction), 1f);
+            return fill;
+        }
+
+        public static void SetBar(Image fill, float fraction)
+        {
+            fill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(fraction), 1f);
+        }
+
+        // ---------- daftar scroll ----------
+
+        public static ScrollRect VScroll(Transform parent, string name, float x0, float y0, float x1, float y1, out RectTransform content)
+        {
+            var root = UIFactory.NewRect(parent, name);
+            UIFactory.Stretch(root, x0, y0, x1, y1);
+            var hit = root.gameObject.AddComponent<Image>();
+            hit.color = new Color(0f, 0f, 0f, 0f);
+            var sr = root.gameObject.AddComponent<ScrollRect>();
+
+            var vp = UIFactory.NewRect(root, "Viewport");
+            UIFactory.Stretch(vp, 0f, 0f, 0.972f, 1f);
+            vp.gameObject.AddComponent<RectMask2D>();
+
+            content = UIFactory.NewRect(vp, "Content");
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.sizeDelta = Vector2.zero;
+
+            var track = Sliced(root, "Scrollbar", "bars/scrollbar_track_thin", 0.978f, 0f, 1f, 1f, 0.6f);
+            track.raycastTarget = true;
+            var sb = track.gameObject.AddComponent<Scrollbar>();
+            sb.direction = Scrollbar.Direction.BottomToTop;
+            var area = UIFactory.NewRect(track.transform, "SlidingArea");
+            UIFactory.Stretch(area, 0f, 0.01f, 1f, 0.99f);
+            var handle = Sliced(area, "Handle", "bars/scrollbar_thumb", 0f, 0f, 1f, 1f, 0.6f);
+            handle.raycastTarget = true;
+            sb.handleRect = handle.rectTransform;
+            sb.targetGraphic = handle;
+
+            sr.viewport = vp;
+            sr.content = content;
+            sr.horizontal = false;
+            sr.vertical = true;
+            sr.movementType = ScrollRect.MovementType.Clamped;
+            sr.scrollSensitivity = 30f;
+            sr.verticalScrollbar = sb;
+            sr.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            return sr;
+        }
+
+        // ---------- latar dan judul ----------
+
+        // parchment_base + vignette di atasnya (sesuai tata letak tiap layar). Memenuhi seluruh layar tanpa distorsi.
+        public static RectTransform Background(Transform canvas, bool topRight, bool bottomLeft, bool bottomRight, bool leftEdge)
+        {
+            var bg = UIFactory.NewRect(canvas, "Background");
+            UIFactory.Stretch(bg, 0f, 0f, 1f, 1f);
+            var baseRt = UIFactory.NewRect(bg, "Base");
+            UIFactory.Stretch(baseRt, 0f, 0f, 1f, 1f);
+            var fit = baseRt.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fit.aspectRatio = 1672f / 940f;
+            var bi = baseRt.gameObject.AddComponent<Image>();
+            bi.sprite = UISprites.Get("backgrounds/parchment_base");
+            bi.raycastTarget = false;
+
+            if (topRight) Pic(bg, "VignetteTR", "backgrounds/vignette_top_right", 0.58f, 0.45f, 1f, 1f, false);
+            if (bottomLeft) Pic(bg, "VignetteBL", "backgrounds/vignette_bottom_left_a", 0f, 0f, 0.42f, 0.55f, false);
+            if (bottomRight) Pic(bg, "VignetteBR", "backgrounds/vignette_bottom_right", 0.58f, 0f, 1f, 0.55f, false);
+            if (leftEdge) Pic(bg, "VignetteL", "backgrounds/vignette_left_edge", 0f, 0f, 0.26f, 1f, false);
+            return bg;
+        }
+
+        // Bar judul: Greek-key di atas, tunas daun kiri/kanan, teks judul (Cinzel), pembatas, dan tombol Back.
+        public static void TitleBar(Transform parent, string title, Action onBack)
+        {
+            Pic(parent, "KeyStrip", "ornaments/key_strip_brown", 0f, 0.972f, 1f, 1f, false);
+            Pic(parent, "SprigL", "ornaments/sprig_left", 0.285f, 0.905f, 0.37f, 0.97f);
+            Pic(parent, "SprigR", "ornaments/sprig_right", 0.63f, 0.905f, 0.715f, 0.97f);
+            Txt(parent, title, 44, Theme.DarkBrown, TextAnchor.MiddleCenter, 0.30f, 0.895f, 0.70f, 0.97f, true);
+            Pic(parent, "Divider", "ornaments/divider_diamond", 0.22f, 0.865f, 0.78f, 0.9f, false);
+            if (onBack != null)
+            {
+                var b = Pill(parent, "Back", "Back", "parchment", 0.022f, 0.905f, 0.14f, 0.97f, onBack, 22, 0.5f);
+                var m = b.GetComponent<UiBtn>();
+                m.Label.rectTransform.anchorMin = new Vector2(0.34f, 0.12f);
+                Pic(b.transform, "Icon", "icons/icon_ui_back", 0.10f, 0.14f, 0.34f, 0.86f);
+            }
+        }
+
+        // ---------- chip dan lencana ----------
+
+        public static void RoleChip(Transform parent, Role role, float x0, float y0, float x1, float y1)
+        {
+            string key = "chip_tank";
+            switch (role)
+            {
+                case Role.DPS: key = "chip_dps"; break;
+                case Role.Healer: key = "chip_healer"; break;
+                case Role.DoTApplier: key = "chip_dot"; break;
+                case Role.BufferDebuffer: key = "chip_buffer"; break;
+            }
+            var img = FitPic(parent, "RoleChip", "chips_badges/" + key, x0, y0, x1, y1);
+            Txt(img.transform, UnitData.RoleLabel(role), 14, Theme.DarkBrown, TextAnchor.MiddleCenter, 0.42f, 0.18f, 0.88f, 0.82f, true);
+        }
+
+        public static void RewardBadge(Transform parent, RewardType type, float x0, float y0, float x1, float y1)
+        {
+            var img = FitPic(parent, "Badge", "chips_badges/badge_" + type.ToString().ToLowerInvariant(), x0, y0, x1, y1);
+            Txt(img.transform, type.ToString(), 13, Theme.DarkBrown, TextAnchor.MiddleCenter, 0.42f, 0.18f, 0.92f, 0.82f, true);
+        }
+
+        // Ribbon bernama (teks asli di tengah).
+        public static Image Ribbon(Transform parent, string color, string text, int size,
+                                   float x0, float y0, float x1, float y1)
+        {
+            var img = FitPic(parent, "Ribbon", "ribbons/ribbon_" + color, x0, y0, x1, y1);
+            Txt(img.transform, text, size, Theme.Parchment, TextAnchor.MiddleCenter, 0.17f, 0.30f, 0.83f, 0.78f, true);
+            return img;
+        }
+    }
+}
