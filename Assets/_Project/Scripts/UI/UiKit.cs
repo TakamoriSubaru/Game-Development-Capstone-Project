@@ -19,18 +19,21 @@ namespace Oddyseus.UI
     {
         public Image Img;
         public Sprite Normal, Hover;
+        public Transform Scaled;      // yang diskalakan saat ditekan (seluruh kartu); kosong = objek ini
         bool over, down;
+
+        Transform Target { get { return Scaled != null ? Scaled : transform; } }
 
         void Apply()
         {
             if (Hover != null) Img.sprite = over ? Hover : Normal;
-            transform.localScale = down ? new Vector3(0.97f, 0.97f, 1f) : Vector3.one;
+            Target.localScale = down ? new Vector3(0.97f, 0.97f, 1f) : Vector3.one;
         }
         public void OnPointerEnter(PointerEventData e) { over = true; Apply(); }
         public void OnPointerExit(PointerEventData e) { over = false; down = false; Apply(); }
         public void OnPointerDown(PointerEventData e) { down = true; Apply(); }
         public void OnPointerUp(PointerEventData e) { down = false; Apply(); }
-        void OnDisable() { over = false; down = false; if (Img != null) { Img.sprite = Normal; transform.localScale = Vector3.one; } }
+        void OnDisable() { over = false; down = false; if (Img != null) { Img.sprite = Normal; Target.localScale = Vector3.one; } }
     }
 
     // Deretan tab (Legends/Costumes, Floor 1..4, ...) pakai sprite tab_selected / tab_unselected.
