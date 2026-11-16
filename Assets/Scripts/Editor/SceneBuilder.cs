@@ -37,12 +37,14 @@ public static class SceneBuilder
         BuildLobby();
         BuildSimple(GameScenes.Story, "STORY MODE", "Placeholder. Story Mode arrives in a later update.");
         BuildSimple(GameScenes.Dungeon, "DUNGEON MODE", "Placeholder. The endless dungeon / island map goes here.");
+        HubSceneBuilder.BuildScene();
 
         EditorBuildSettings.scenes = new[]
         {
             new EditorBuildSettingsScene(ScenePath(GameScenes.Title), true),
             new EditorBuildSettingsScene(ScenePath(GameScenes.Lobby), true),
             new EditorBuildSettingsScene(ScenePath(GameScenes.Story), true),
+            new EditorBuildSettingsScene(ScenePath(GameScenes.DungeonHub), true),
             new EditorBuildSettingsScene(ScenePath(GameScenes.Dungeon), true),
         };
         EditorSceneManager.OpenScene(ScenePath(GameScenes.Title));

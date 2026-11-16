@@ -82,6 +82,6 @@ public class DungeonTableHotspot : Hotspot
         rig.Shake(0.25f, 0.35f);
         yield return new WaitForSeconds(0.55f);
 
-        SceneFader.LoadScene(GameScenes.Dungeon, 0.5f);
+        SceneFader.LoadScene(GameScenes.DungeonHub, 0.5f);
     }
 }
