@@ -231,9 +231,9 @@ namespace Oddyseus.UI
         }
 
         public static Button Pill(Transform parent, string name, string label, string set,
-                                  float x0, float y0, float x1, float y1, Action onClick, int fontSize = 22)
+                                  float x0, float y0, float x1, float y1, Action onClick, int fontSize = 22, float borderScale = 0.55f)
         {
-            return Pill(parent, name, label, set, Color.white, x0, y0, x1, y1, onClick, fontSize);
+            return Pill(parent, name, label, set, Color.white, x0, y0, x1, y1, onClick, fontSize, borderScale);
         }
 
         public static readonly Color GoldTint = new Color(0.98f, 0.80f, 0.30f, 1f);
