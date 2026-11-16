@@ -1,0 +1,785 @@
+{
+ "relics": [
+  {
+   "n": 1,
+   "code": "IS",
+   "name": "Ithacan Sandal",
+   "tier": "common",
+   "file": "relics/relic_01_is.png"
+  },
+  {
+   "n": 2,
+   "code": "OB",
+   "name": "Olive Branch of Peace",
+   "tier": "common",
+   "file": "relics/relic_02_ob.png"
+  },
+  {
+   "n": 3,
+   "code": "WO",
+   "name": "Wooden Oar",
+   "tier": "common",
+   "file": "relics/relic_03_wo.png"
+  },
+  {
+   "n": 4,
+   "code": "BS",
+   "name": "Bronze Shield Rim",
+   "tier": "common",
+   "file": "relics/relic_04_bs.png"
+  },
+  {
+   "n": 5,
+   "code": "PC",
+   "name": "Phaestus Clay Jar",
+   "tier": "common",
+   "file": "relics/relic_05_pc.png"
+  },
+  {
+   "n": 6,
+   "code": "FA",
+   "name": "Flint Arrowhead",
+   "tier": "common",
+   "file": "relics/relic_06_fa.png"
+  },
+  {
+   "n": 7,
+   "code": "TC",
+   "name": "Traveler's Cloak",
+   "tier": "common",
+   "file": "relics/relic_07_tc.png"
+  },
+  {
+   "n": 8,
+   "code": "SC",
+   "name": "Sea Shell Charm",
+   "tier": "common",
+   "file": "relics/relic_08_sc.png"
+  },
+  {
+   "n": 9,
+   "code": "LW",
+   "name": "Laurel Wreath",
+   "tier": "common",
+   "file": "relics/relic_09_lw.png"
+  },
+  {
+   "n": 10,
+   "code": "SD",
+   "name": "Spartan Dagger",
+   "tier": "common",
+   "file": "relics/relic_10_sd.png"
+  },
+  {
+   "n": 11,
+   "code": "CA",
+   "name": "Ceramic Amphora",
+   "tier": "common",
+   "file": "relics/relic_11_ca.png"
+  },
+  {
+   "n": 12,
+   "code": "WB",
+   "name": "Worn Leather Belt",
+   "tier": "common",
+   "file": "relics/relic_12_wb.png"
+  },
+  {
+   "n": 13,
+   "code": "HF",
+   "name": "Harpy Feather",
+   "tier": "common",
+   "file": "relics/relic_13_hf.png"
+  },
+  {
+   "n": 14,
+   "code": "FN",
+   "name": "Fisherman's Net",
+   "tier": "common",
+   "file": "relics/relic_14_fn.png"
+  },
+  {
+   "n": 15,
+   "code": "NT",
+   "name": "Nymph's Tear",
+   "tier": "common",
+   "file": "relics/relic_15_nt.png"
+  },
+  {
+   "n": 16,
+   "code": "AW",
+   "name": "Aeolus' Wind Bag",
+   "tier": "uncommon",
+   "file": "relics/relic_16_aw.png"
+  },
+  {
+   "n": 17,
+   "code": "CH",
+   "name": "Circe's Herb (Moly)",
+   "tier": "uncommon",
+   "file": "relics/relic_17_ch.png"
+  },
+  {
+   "n": 18,
+   "code": "CE",
+   "name": "Cyclops Eye Gem",
+   "tier": "uncommon",
+   "file": "relics/relic_18_ce.png"
+  },
+  {
+   "n": 19,
+   "code": "LF",
+   "name": "Lotus Flower",
+   "tier": "uncommon",
+   "file": "relics/relic_19_lf.png"
+  },
+  {
+   "n": 20,
+   "code": "SE",
+   "name": "Sirens' Echo Shell",
+   "tier": "uncommon",
+   "file": "relics/relic_20_se.png"
+  },
+  {
+   "n": 21,
+   "code": "ST",
+   "name": "Scylla's Tooth",
+   "tier": "uncommon",
+   "file": "relics/relic_21_st.png"
+  },
+  {
+   "n": 22,
+   "code": "CW",
+   "name": "Charybdis Whirlpool Rune",
+   "tier": "uncommon",
+   "file": "relics/relic_22_cw.png"
+  },
+  {
+   "n": 23,
+   "code": "TW",
+   "name": "Trojan Wooden Chip",
+   "tier": "uncommon",
+   "file": "relics/relic_23_tw.png"
+  },
+  {
+   "n": 24,
+   "code": "HC",
+   "name": "Helios' Flame Charm",
+   "tier": "uncommon",
+   "file": "relics/relic_24_hc.png"
+  },
+  {
+   "n": 25,
+   "code": "CV",
+   "name": "Calypso's Veil",
+   "tier": "uncommon",
+   "file": "relics/relic_25_cv.png"
+  },
+  {
+   "n": 26,
+   "code": "HS",
+   "name": "Hermes' Winged Sandal",
+   "tier": "uncommon",
+   "file": "relics/relic_26_hs.png"
+  },
+  {
+   "n": 27,
+   "code": "HH",
+   "name": "Hephaestus Hammer",
+   "tier": "uncommon",
+   "file": "relics/relic_27_hh.png"
+  },
+  {
+   "n": 28,
+   "code": "SY",
+   "name": "Stygian Coin",
+   "tier": "uncommon",
+   "file": "relics/relic_28_sy.png"
+  },
+  {
+   "n": 29,
+   "code": "GS",
+   "name": "Gorgon Shield Scale",
+   "tier": "uncommon",
+   "file": "relics/relic_29_gs.png"
+  },
+  {
+   "n": 30,
+   "code": "PF",
+   "name": "Pan's Flute",
+   "tier": "uncommon",
+   "file": "relics/relic_30_pf.png"
+  },
+  {
+   "n": 31,
+   "code": "BO",
+   "name": "Bow of Odysseus",
+   "tier": "rare",
+   "file": "relics/relic_31_bo.png"
+  },
+  {
+   "n": 32,
+   "code": "PS",
+   "name": "Penelope's Shroud",
+   "tier": "rare",
+   "file": "relics/relic_32_ps.png"
+  },
+  {
+   "n": 33,
+   "code": "AH",
+   "name": "Argus' Hundred Eyes",
+   "tier": "rare",
+   "file": "relics/relic_33_ah.png"
+  },
+  {
+   "n": 34,
+   "code": "GF",
+   "name": "Golden Fleece",
+   "tier": "rare",
+   "file": "relics/relic_34_gf.png"
+  },
+  {
+   "n": 35,
+   "code": "PE",
+   "name": "Pegasus Feather Footwear",
+   "tier": "rare",
+   "file": "relics/relic_35_pe.png"
+  },
+  {
+   "n": 36,
+   "code": "PB",
+   "name": "Pandora's Mythic Box",
+   "tier": "rare",
+   "file": "relics/relic_36_pb.png"
+  },
+  {
+   "n": 37,
+   "code": "MG",
+   "name": "Medusa's Gaze Mirror",
+   "tier": "rare",
+   "file": "relics/relic_37_mg.png"
+  },
+  {
+   "n": 38,
+   "code": "CD",
+   "name": "Caduceus Staff",
+   "tier": "rare",
+   "file": "relics/relic_38_cd.png"
+  },
+  {
+   "n": 39,
+   "code": "MH",
+   "name": "Minotaur Horn",
+   "tier": "rare",
+   "file": "relics/relic_39_mh.png"
+  },
+  {
+   "n": 40,
+   "code": "CT",
+   "name": "Chiron's Teaching Scroll",
+   "tier": "rare",
+   "file": "relics/relic_40_ct.png"
+  },
+  {
+   "n": 41,
+   "code": "PP",
+   "name": "Persephone's Pomegranate",
+   "tier": "rare",
+   "file": "relics/relic_41_pp.png"
+  },
+  {
+   "n": 42,
+   "code": "AC",
+   "name": "Ambrosia Chalice",
+   "tier": "rare",
+   "file": "relics/relic_42_ac.png"
+  },
+  {
+   "n": 43,
+   "code": "OL",
+   "name": "Orpheus' Lyre",
+   "tier": "rare",
+   "file": "relics/relic_43_ol.png"
+  },
+  {
+   "n": 44,
+   "code": "HV",
+   "name": "Hydra's Venom Vial",
+   "tier": "rare",
+   "file": "relics/relic_44_hv.png"
+  },
+  {
+   "n": 45,
+   "code": "AG",
+   "name": "Achilles' Heel Gauntlet",
+   "tier": "rare",
+   "file": "relics/relic_45_ag.png"
+  },
+  {
+   "n": 46,
+   "code": "CO",
+   "name": "Crown of Olympus",
+   "tier": "legendary",
+   "file": "relics/relic_46_co.png"
+  },
+  {
+   "n": 47,
+   "code": "HT",
+   "name": "Heart of the Titan",
+   "tier": "legendary",
+   "file": "relics/relic_47_ht.png"
+  },
+  {
+   "n": 48,
+   "code": "PT",
+   "name": "Poseidon's Trident",
+   "tier": "legendary",
+   "file": "relics/relic_48_pt.png"
+  },
+  {
+   "n": 49,
+   "code": "ZT",
+   "name": "Zeus' Thunder Crest",
+   "tier": "legendary",
+   "file": "relics/relic_49_zt.png"
+  },
+  {
+   "n": 50,
+   "code": "HR",
+   "name": "Hades' Sovereign Ring",
+   "tier": "legendary",
+   "file": "relics/relic_50_hr.png"
+  },
+  {
+   "n": 51,
+   "code": "AE",
+   "name": "Athena's Aegis Core",
+   "tier": "legendary",
+   "file": "relics/relic_51_ae.png"
+  },
+  {
+   "n": 52,
+   "code": "AB",
+   "name": "Ares' War Banner",
+   "tier": "legendary",
+   "file": "relics/relic_52_ab.png"
+  },
+  {
+   "n": 53,
+   "code": "DG",
+   "name": "Dionysus' Golden Goblet",
+   "tier": "legendary",
+   "file": "relics/relic_53_dg.png"
+  },
+  {
+   "n": 54,
+   "code": "AS",
+   "name": "Apollo's Sun Chariot",
+   "tier": "legendary",
+   "file": "relics/relic_54_as.png"
+  },
+  {
+   "n": 55,
+   "code": "CB",
+   "name": "Cerberus Collar",
+   "tier": "legendary",
+   "file": "relics/relic_55_cb.png"
+  },
+  {
+   "n": 56,
+   "code": "PM",
+   "name": "Prometheus' Eternal Flame",
+   "tier": "legendary",
+   "file": "relics/relic_56_pm.png"
+  },
+  {
+   "n": 57,
+   "code": "GA",
+   "name": "Golden Apple of Discord",
+   "tier": "legendary",
+   "file": "relics/relic_57_ga.png"
+  },
+  {
+   "n": 58,
+   "code": "HD",
+   "name": "Helm of Darkness",
+   "tier": "legendary",
+   "file": "relics/relic_58_hd.png"
+  },
+  {
+   "n": 59,
+   "code": "HG",
+   "name": "Chrono's Hourglass",
+   "tier": "legendary",
+   "file": "relics/relic_59_hg.png"
+  },
+  {
+   "n": 60,
+   "code": "OT",
+   "name": "Odyssey's Triumph Crest",
+   "tier": "legendary",
+   "file": "relics/relic_60_ot.png"
+  }
+ ],
+ "blessings": [
+  {
+   "god": "Apollo",
+   "file": "blessings/blessing_apollo.png",
+   "round": "blessings/blessing_apollo_round.png"
+  },
+  {
+   "god": "Athena",
+   "file": "blessings/blessing_athena.png",
+   "round": "blessings/blessing_athena_round.png"
+  },
+  {
+   "god": "Ares",
+   "file": "blessings/blessing_ares.png",
+   "round": "blessings/blessing_ares_round.png"
+  },
+  {
+   "god": "Hephaestus",
+   "file": "blessings/blessing_hephaestus.png",
+   "round": "blessings/blessing_hephaestus_round.png"
+  },
+  {
+   "god": "Artemis",
+   "file": "blessings/blessing_artemis.png",
+   "round": "blessings/blessing_artemis_round.png"
+  },
+  {
+   "god": "Demeter",
+   "file": "blessings/blessing_demeter.png",
+   "round": "blessings/blessing_demeter_round.png"
+  },
+  {
+   "god": "Hermes",
+   "file": "blessings/blessing_hermes.png",
+   "round": "blessings/blessing_hermes_round.png"
+  },
+  {
+   "god": "Zeus",
+   "file": "blessings/blessing_zeus.png",
+   "round": "blessings/blessing_zeus_round.png"
+  },
+  {
+   "god": "Dionysus",
+   "file": "blessings/blessing_dionysus.png",
+   "round": "blessings/blessing_dionysus_round.png"
+  },
+  {
+   "god": "Aphrodite",
+   "file": "blessings/blessing_aphrodite.png",
+   "round": "blessings/blessing_aphrodite_round.png"
+  },
+  {
+   "god": "Hestia",
+   "file": "blessings/blessing_hestia.png",
+   "round": "blessings/blessing_hestia_round.png"
+  },
+  {
+   "god": "Nemesis",
+   "file": "blessings/blessing_nemesis.png",
+   "round": "blessings/blessing_nemesis_round.png"
+  }
+ ],
+ "portraits": [
+  {
+   "name": "Odysseus",
+   "file": "portraits/portrait_odysseus.png",
+   "round": "portraits/portrait_odysseus_round.png"
+  },
+  {
+   "name": "Polites",
+   "file": "portraits/portrait_polites.png",
+   "round": "portraits/portrait_polites_round.png"
+  },
+  {
+   "name": "Eurylochus",
+   "file": "portraits/portrait_eurylochus.png",
+   "round": "portraits/portrait_eurylochus_round.png"
+  },
+  {
+   "name": "Elpenor",
+   "file": "portraits/portrait_elpenor.png",
+   "round": "portraits/portrait_elpenor_round.png"
+  },
+  {
+   "name": "Perimedes",
+   "file": "portraits/portrait_perimedes.png",
+   "round": "portraits/portrait_perimedes_round.png"
+  },
+  {
+   "name": "Eurybates",
+   "file": "portraits/portrait_eurybates.png",
+   "round": "portraits/portrait_eurybates_round.png"
+  },
+  {
+   "name": "Ajax the Great",
+   "file": "portraits/portrait_ajax.png",
+   "round": "portraits/portrait_ajax_round.png"
+  },
+  {
+   "name": "Circe",
+   "file": "portraits/portrait_circe.png",
+   "round": "portraits/portrait_circe_round.png"
+  },
+  {
+   "name": "Eurycleia",
+   "file": "portraits/portrait_eurycleia.png",
+   "round": "portraits/portrait_eurycleia_round.png"
+  }
+ ],
+ "packs": [
+  {
+   "n": 1,
+   "name": "Ismaros",
+   "floor": 1,
+   "file": "packs/pack_01_ismaros.png",
+   "size": [
+    321,
+    857
+   ]
+  },
+  {
+   "n": 2,
+   "name": "Lotus Shore",
+   "floor": 1,
+   "file": "packs/pack_02_lotus_shore.png",
+   "size": [
+    319,
+    857
+   ]
+  },
+  {
+   "n": 3,
+   "name": "Cave of Polyphemus",
+   "floor": 1,
+   "file": "packs/pack_03_cave_of_polyphemus.png",
+   "size": [
+    320,
+    857
+   ]
+  },
+  {
+   "n": 4,
+   "name": "Triton Strait",
+   "floor": 1,
+   "file": "packs/pack_04_triton_strait.png",
+   "size": [
+    319,
+    857
+   ]
+  },
+  {
+   "n": 5,
+   "name": "Isle of Aeolus",
+   "floor": 1,
+   "file": "packs/pack_05_isle_of_aeolus.png",
+   "size": [
+    320,
+    857
+   ]
+  },
+  {
+   "n": 6,
+   "name": "Laestrygonian Harbor",
+   "floor": 2,
+   "file": "packs/pack_06_laestrygonian_harbor.png",
+   "size": [
+    312,
+    861
+   ]
+  },
+  {
+   "n": 7,
+   "name": "Garden of Circe",
+   "floor": 2,
+   "file": "packs/pack_07_garden_of_circe.png",
+   "size": [
+    323,
+    861
+   ]
+  },
+  {
+   "n": 8,
+   "name": "Siren Rocks",
+   "floor": 2,
+   "file": "packs/pack_08_siren_rocks.png",
+   "size": [
+    321,
+    861
+   ]
+  },
+  {
+   "n": 9,
+   "name": "Thrinacia",
+   "floor": 2,
+   "file": "packs/pack_09_thrinacia.png",
+   "size": [
+    320,
+    861
+   ]
+  },
+  {
+   "n": 10,
+   "name": "Planctae Rocks",
+   "floor": 2,
+   "file": "packs/pack_10_planctae_rocks.png",
+   "size": [
+    318,
+    861
+   ]
+  },
+  {
+   "n": 11,
+   "name": "Gates of Nekyia",
+   "floor": 3,
+   "file": "packs/pack_11_gates_of_nekyia.png",
+   "size": [
+    314,
+    883
+   ]
+  },
+  {
+   "n": 12,
+   "name": "Tartarus Punishment",
+   "floor": 3,
+   "file": "packs/pack_12_tartarus_punishment.png",
+   "size": [
+    323,
+    883
+   ]
+  },
+  {
+   "n": 13,
+   "name": "Persephone's Threshold",
+   "floor": 3,
+   "file": "packs/pack_13_persephones_threshold.png",
+   "size": [
+    324,
+    883
+   ]
+  },
+  {
+   "n": 14,
+   "name": "Scylla's Lair",
+   "floor": 3,
+   "file": "packs/pack_14_scyllas_lair.png",
+   "size": [
+    323,
+    883
+   ]
+  },
+  {
+   "n": 15,
+   "name": "Charybdis Whirlpool",
+   "floor": 3,
+   "file": "packs/pack_15_charybdis_whirlpool.png",
+   "size": [
+    313,
+    883
+   ]
+  },
+  {
+   "n": 16,
+   "name": "Ogygia",
+   "floor": 4,
+   "file": "packs/pack_16_ogygia.png",
+   "size": [
+    315,
+    883
+   ]
+  },
+  {
+   "n": 17,
+   "name": "Wrath of Poseidon",
+   "floor": 4,
+   "file": "packs/pack_17_wrath_of_poseidon.png",
+   "size": [
+    323,
+    883
+   ]
+  },
+  {
+   "n": 18,
+   "name": "Athena's Mind Palace",
+   "floor": 4,
+   "file": "packs/pack_18_athenas_mind_palace.png",
+   "size": [
+    333,
+    883
+   ]
+  },
+  {
+   "n": 19,
+   "name": "Ithaca Shore",
+   "floor": 4,
+   "file": "packs/pack_19_ithaca_shore.png",
+   "size": [
+    324,
+    883
+   ]
+  },
+  {
+   "n": 20,
+   "name": "Hall of Ithaca",
+   "floor": 4,
+   "file": "packs/pack_20_hall_of_ithaca.png",
+   "size": [
+    315,
+    883
+   ]
+  }
+ ],
+ "scroll_layout": {
+  "normal": {
+   "window": [
+    99,
+    112,
+    334,
+    488
+   ],
+   "size": [
+    434,
+    779
+   ]
+  },
+  "hover": {
+   "window": [
+    99,
+    112,
+    335,
+    488
+   ],
+   "size": [
+    434,
+    779
+   ]
+  },
+  "undiscovered": {
+   "window": [
+    99,
+    112,
+    334,
+    488
+   ],
+   "size": [
+    433,
+    779
+   ]
+  },
+  "cleared": {
+   "window": [
+    96,
+    112,
+    336,
+    488
+   ],
+   "size": [
+    433,
+    779
+   ]
+  }
+ }
+}
