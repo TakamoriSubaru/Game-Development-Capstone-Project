@@ -5,22 +5,36 @@ using UnityEngine.UI;
 
 namespace Oddyseus.UI
 {
-    // Warna mengikuti wireframe (biru muda). Ganti di sini untuk re-skin seluruh UI.
+    // Tema "Warm Parchment Gouache". Satu-satunya tempat warna didefinisikan.
+    // Lima token inti: Parchment, Terracotta, Olive, DarkBrown, Gold. Nama lama (Bg, Panel, Ink, ...) dipertahankan
+    // supaya view yang sudah ada (Party, Map, Equipment, ...) otomatis ikut ganti tampilan.
     public static class Theme
     {
-        public static readonly Color Bg = Hex("#C6D9FF");
-        public static readonly Color Panel = Hex("#D6E3FF");
-        public static readonly Color Card = Hex("#EEF3FF");
-        public static readonly Color Slate = Hex("#8FA0BC");
-        public static readonly Color Ink = Hex("#2B3652");
-        public static readonly Color Line = Hex("#5A6A8C");
-        public static readonly Color TabActive = Hex("#6B7690");
-        public static readonly Color Gold = Hex("#E8DC9A");
-        public static readonly Color Highlight = Hex("#F2C94C");
-        public static readonly Color Good = Hex("#3DBE5A");
-        public static readonly Color Bad = Hex("#D64545");
-        public static readonly Color Dark = Hex("#555555");
-        public static readonly Color Dim = new Color(0f, 0f, 0f, 0.55f);
+        // --- token inti ---
+        public static readonly Color Parchment = Hex("#F7EEDC");
+        public static readonly Color Terracotta = Hex("#C97A52");
+        public static readonly Color Olive = Hex("#6B8F5B");
+        public static readonly Color DarkBrown = Hex("#4B3B2E");
+        public static readonly Color Gold = Hex("#EBB24E");
+
+        // --- turunan ---
+        public static readonly Color Muted = Hex("#8A7560");          // teks sekunder / terkunci
+        public static readonly Color Danger = Hex("#B5483A");
+        public static readonly Color Disabled = new Color(0.55f, 0.5f, 0.45f, 1f);
+
+        // --- nama lama, dipetakan ke palet baru ---
+        public static readonly Color Bg = Parchment;
+        public static readonly Color Panel = Hex("#EFE2C6");
+        public static readonly Color Card = Hex("#FBF5E8");
+        public static readonly Color Slate = Hex("#A58E74");
+        public static readonly Color Ink = DarkBrown;
+        public static readonly Color Line = Hex("#8A6A4B");
+        public static readonly Color TabActive = Terracotta;
+        public static readonly Color Highlight = Gold;
+        public static readonly Color Good = Olive;
+        public static readonly Color Bad = Danger;
+        public static readonly Color Dark = DarkBrown;
+        public static readonly Color Dim = new Color(0.17f, 0.12f, 0.08f, 0.62f);
 
         public static Color Hex(string h)
         {
@@ -40,6 +54,7 @@ namespace Oddyseus.UI
         {
             get
             {
+                if (font == null) font = UISprites.BodyFont;   // EB Garamond (Resources/UI/Fonts), kalau ada
                 if (font == null)
                 {
 #if UNITY_2022_2_OR_NEWER
