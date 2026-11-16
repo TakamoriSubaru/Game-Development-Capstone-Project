@@ -133,6 +133,28 @@ namespace Oddyseus.UI
             return img;
         }
 
+        // Kotak kosong dengan rasio tetap (lebar/tinggi), rata tengah di dalam area. Dipakai kalau beberapa anak harus
+        // berbagi satu bidang gambar (mis. lukisan Pack di belakang gulungan).
+        public static RectTransform FitRect(Transform parent, string name, float x0, float y0, float x1, float y1, float aspect)
+        {
+            var box = UIFactory.NewRect(parent, name + "Box");
+            UIFactory.Stretch(box, x0, y0, x1, y1);
+            var rt = UIFactory.NewRect(box, name);
+            UIFactory.Stretch(rt, 0f, 0f, 1f, 1f);
+            var fit = rt.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fit.aspectRatio = aspect;
+            return rt;
+        }
+
+        // Baris "Label  nilai" (label redup, nilai gelap) dalam satu Text.
+        public static Text Field(Transform parent, string label, string value, int size, float x0, float y0, float x1, float y1,
+                                 TextAnchor align = TextAnchor.UpperLeft)
+        {
+            string hex = ColorUtility.ToHtmlStringRGB(Theme.Muted);
+            return Txt(parent, "<color=#" + hex + ">" + label + "</color>  " + value, size, Theme.DarkBrown, align, x0, y0, x1, y1);
+        }
+
         // Frame 9-slice. borderScale < 1 mengecilkan dekorasi sudut (border asli dihitung di UIAssetImporter).
         public static Image Sliced(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1, float borderScale)
         {
@@ -379,8 +401,46 @@ namespace Oddyseus.UI
                                    float x0, float y0, float x1, float y1)
         {
             var img = FitPic(parent, "Ribbon", "ribbons/ribbon_" + color, x0, y0, x1, y1);
-            Txt(img.transform, text, size, Theme.Parchment, TextAnchor.MiddleCenter, 0.17f, 0.30f, 0.83f, 0.78f, true);
+            Txt(img.transform, text, size, Theme.DarkBrown, TextAnchor.MiddleCenter, 0.17f, 0.30f, 0.83f, 0.78f, true);
             return img;
+        }
+    }
+}
+
+namespace Oddyseus.UI
+{
+    // Grid yang lebar selnya mengikuti lebar kontainer (jumlah kolom tetap, rasio tinggi/lebar tetap).
+    // Pasang pada Content di dalam ScrollRect bersama ContentSizeFitter (vertical = PreferredSize).
+    [RequireComponent(typeof(GridLayoutGroup))]
+    public class ResponsiveGrid : MonoBehaviour
+    {
+        public int Cols = 5;
+        public float Spacing = 12f;
+        public float Aspect = 1.4f;     // tinggi / lebar
+        public float Pad = 8f;
+        GridLayoutGroup g;
+        RectTransform rt;
+
+        void OnEnable() { Apply(); }
+        void Start() { Apply(); }
+        void OnRectTransformDimensionsChange() { Apply(); }
+
+        public void Apply()
+        {
+            if (g == null) g = GetComponent<GridLayoutGroup>();
+            if (rt == null) rt = transform as RectTransform;
+            if (g == null || rt == null) return;
+            float w = rt.rect.width;
+            if (w <= 1f) return;
+            float cell = (w - 2f * Pad - Spacing * (Cols - 1)) / Cols;
+            var size = new Vector2(cell, cell * Aspect);
+            if ((g.cellSize - size).sqrMagnitude < 0.01f && g.constraintCount == Cols) return;
+            g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            g.constraintCount = Cols;
+            g.spacing = new Vector2(Spacing, Spacing);
+            g.padding = new RectOffset((int)Pad, (int)Pad, (int)Pad, (int)Pad);
+            g.cellSize = size;
+            LayoutRebuilder.MarkLayoutForRebuild(rt);
         }
     }
 }
