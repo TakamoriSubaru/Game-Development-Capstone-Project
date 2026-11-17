@@ -21,7 +21,7 @@ public class CompassIndicator : MonoBehaviour
     const string MarkerSpriteName = "pa_knob";
     const float MarkerSize = 60f;        // knob size in UI pixels
     const float SlideSpeed = 12f;        // higher = the knob arrives faster
-    static readonly Color InactiveNode = new Color(0.55f, 0.58f, 0.50f, 1f);   // dimmed dots
+    static readonly Color InactiveNode = Color.white;   // nodes show their painted art as it is
     static readonly Color ActiveHalo = new Color32(255, 170, 40, 255);          // soft glow behind the knob
     const float HaloStrength = 0.55f;
     static readonly Color ActiveLabel = new Color32(190, 60, 25, 255);          // deep terracotta red

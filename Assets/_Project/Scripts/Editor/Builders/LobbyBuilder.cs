@@ -15,6 +15,8 @@ using UnityEngine.SceneManagement;
 /// so the 4 backgrounds sit side by side and the camera (size 5.628) shows exactly one per stop.
 /// Art slots are objects named "NAME (replace sprite)": swap the Sprite in the Inspector, or overwrite the PNG
 /// in Art/Lobby with the same name.
+/// Stops 0, 2 and 3 use the painted backgrounds: invisible hotspots sit on the painted window, map and door
+/// (positions measured on the 1672x941 art), no coloured placeholder shapes.
 /// NOTE: the older menu "Oddyseus/Build Placeholder Scenes" rebuilds the OLD placeholder Lobby. Do not run it after this.
 /// </summary>
 public static class LobbyBuilder
@@ -37,6 +39,12 @@ public static class LobbyBuilder
         return new Vector2(X1 + (u - 836f) * WU, (470.5f - v) * WU);
     }
 
+    // same, for any stop (0 window, 1 lobby, 2 table, 3 door)
+    static Vector2 PxAt(int stop, float u, float v)
+    {
+        return new Vector2(stop * 20f + (u - 836f) * WU, (470.5f - v) * WU);
+    }
+
     [MenuItem("Oddyseus/Build Lobby (Remastered)")]
     public static void Build()
     {
@@ -55,7 +63,7 @@ public static class LobbyBuilder
         for (int i = 0; i < bgs.Length; i++) ConfigureSprite(ArtDir + "/" + bgs[i], BgPpu);
         ConfigureSprite(ArtDir + "/wheel_glow.png", 100f);
         ConfigureSprite(ArtDir + "/scrolls_glow.png", 100f);
-        ConfigureSprite(ArtDir + "/character_polites.png", 100f);
+        ConfigureSprite(ArtDir + "/character_polites.png", 100f, true);   // readable: the visible part is measured automatically
 
         string scenePath = ScenesDir + "/" + GameScenes.Lobby + ".unity";
         BackupScene(scenePath);
@@ -100,8 +108,10 @@ public static class LobbyBuilder
         Transform mouthT = null;
         if (polites != null)
         {
-            Cutout("Character Polites (replace sprite)", model, polites, new RectInt(213, 44, 617, 1482),
-                   charCenter, new Vector2(0.3239f, 0.3239f), 5);
+            // Any PNG size works: the transparent margin is trimmed, the visible figure is 480 background px tall,
+            // and its feet stand at v=810 (the floor).
+            AutoFit("Character Polites (replace sprite)", model, ArtDir + "/character_polites.png",
+                    Px(900f, 810f), 480f, 5);
         }
         else
         {
@@ -152,71 +162,23 @@ public static class LobbyBuilder
                              barrelCenter, new Vector2(0.185f, 0.185f), 10);
         else Debug.LogWarning("Oddyseus: scrolls_glow.png not found, the Almanac barrel has no hover glow yet.");
 
-        // ===== STOPS 0, 2, 3: exactly the placeholder props SceneBuilder builds today =====
-        // ===== STOP 0 (x=0): story window =====
-        var win = Empty("StoryWindow (stop 0)", hotspots, new Vector2(X0, 0));
-        Spr("PLACEHOLDER_Frame", win, new Vector2(0, 1), new Vector2(4.4f, 5.4f), wood, 1);
-        Spr("PLACEHOLDER_Sky", win, new Vector2(0, 1), new Vector2(3.8f, 4.8f), new Color(.55f, .78f, .95f), 2);
-        Spr("PLACEHOLDER_CloudA", win, new Vector2(-.8f, 2.4f), new Vector2(1.2f, .5f), new Color(1, 1, 1, .9f), 3, true);
-        Spr("PLACEHOLDER_BarV", win, new Vector2(0, 1), new Vector2(.15f, 4.8f), wood, 4);
-        Spr("PLACEHOLDER_BarH", win, new Vector2(0, 1), new Vector2(3.8f, .15f), wood, 4);
-        Spr("PLACEHOLDER_Sill", win, new Vector2(0, -1.75f), new Vector2(5f, .4f), wood * 1.2f, 4);
+        // ===== STOPS 0, 2, 3: painted backgrounds. Invisible hotspots sit on the painted objects. =====
+        // Positions are background pixels of the 1672x941 art (u right, v down).
 
-        var lockIcon = Empty("LockIcon (hidden when unlocked)", win, new Vector2(0, 1));
-        Spr("PLACEHOLDER_Shackle", lockIcon, new Vector2(0, .5f), new Vector2(.7f, .7f), new Color(.55f, .45f, .1f), 9, true);
-        Spr("PLACEHOLDER_LockBody", lockIcon, Vector2.zero, new Vector2(1f, .75f), new Color(.85f, .68f, .15f), 10);
-
-        var bird = Empty("Bird (idle on sill)", win, new Vector2(1.2f, -1.25f));
-        Color birdC = new Color(.25f, .45f, .75f);
-        Spr("PLACEHOLDER_BirdBody", bird, Vector2.zero, new Vector2(.8f, .6f), birdC, 7, true);
-        Spr("PLACEHOLDER_BirdHead", bird, new Vector2(.4f, .25f), new Vector2(.4f, .4f), birdC, 8, true);
-        Spr("PLACEHOLDER_Beak", bird, new Vector2(.65f, .25f), new Vector2(.25f, .1f), new Color(.95f, .6f, .1f), 8);
-        var wingR = Empty("WingBack", bird, new Vector2(0, .1f));
-        Spr("PLACEHOLDER_WingBackMesh", wingR, new Vector2(-.3f, .1f), new Vector2(.6f, .25f), birdC * .7f, 6, true);
-        var wingL = Empty("WingFront", bird, new Vector2(0, .1f));
-        Spr("PLACEHOLDER_WingFrontMesh", wingL, new Vector2(-.3f, .1f), new Vector2(.6f, .25f), birdC * .85f, 9, true);
-        var flyTarget = Empty("FlyTarget (where the bird disappears to)", win, new Vector2(-.4f, 3f));
-
-        Box(win.gameObject, new Vector2(0, .6f), new Vector2(5f, 6.6f));
+        // ---- STOP 0 (x=0): the boarded window = Story Mode
+        var win = Empty("StoryWindow (stop 0)", hotspots, PxAt(0, 834f, 290f));
+        Box(win.gameObject, Vector2.zero, new Vector2(520f * WU, 570f * WU));
         var story = win.gameObject.AddComponent<StoryWindowHotspot>();
-        story.rig = rig; story.bird = bird; story.flyTarget = flyTarget;
-        story.wingL = wingL; story.wingR = wingR; story.lockIcon = lockIcon.gameObject;
+        story.rig = rig;                                   // bird / lock are optional (painted window)
+        win.gameObject.AddComponent<PaintedGlow>();
 
-        // ===== STOP 2 (x=40): table + map =====
-        var table = Empty("DungeonTable_Props (stop 2)", hotspots, Vector2.zero);
-        Spr("PLACEHOLDER_TableTop", table, new Vector2(X2, -1.5f), new Vector2(7f, .4f), wood, 8);
-        Spr("PLACEHOLDER_LegL", table, new Vector2(X2 - 2.8f, -2.4f), new Vector2(.3f, 1.4f), wood * .8f, 8);
-        Spr("PLACEHOLDER_LegR", table, new Vector2(X2 + 2.8f, -2.4f), new Vector2(.3f, 1.4f), wood * .8f, 8);
-        Color gold = new Color(1f, .8f, .1f);
-        Spr("PLACEHOLDER_Gold1", table, new Vector2(X2 - 2.4f, -1.15f), new Vector2(.5f, .25f), gold, 9, true);
-        Spr("PLACEHOLDER_Gold2", table, new Vector2(X2 - 2.0f, -1.15f), new Vector2(.5f, .25f), gold, 9, true);
-        Spr("PLACEHOLDER_Gold3", table, new Vector2(X2 - 2.2f, -.95f), new Vector2(.5f, .25f), gold, 9, true);
-        Spr("PLACEHOLDER_ChestBody", table, new Vector2(X2 + 2.3f, -.95f), new Vector2(1.1f, .7f), new Color(.5f, .3f, .1f), 9);
-        Spr("PLACEHOLDER_ChestLid", table, new Vector2(X2 + 2.3f, -.5f), new Vector2(1.1f, .25f), new Color(.7f, .5f, .15f), 9);
-
-        float[] px = { X2 - 4.7f, X2 + 4.7f, X2 + 6.3f };
-        for (int i = 0; i < px.Length; i++)
-        {
-            var p = Empty("Person_" + (i + 1), table, new Vector2(px[i], 0));
-            Spr("PLACEHOLDER_Body", p, new Vector2(0, -1.2f), new Vector2(1.3f, 3.6f), new Color(.2f + i * .12f, .22f, .32f), 3);
-            Spr("PLACEHOLDER_Head", p, new Vector2(0, 1.1f), new Vector2(1f, 1f), new Color(.85f, .68f, .55f), 4, true);
-        }
-
-        var knifeStart = Empty("KnifeStart (where the knife is thrown from)", table, new Vector2(X2 - 3.4f, -3.6f));
-        var knife = Empty("Knife", table, knifeStart.localPosition);
-        Spr("PLACEHOLDER_Blade", knife, new Vector2(.3f, 0), new Vector2(1f, .12f), new Color(.85f, .87f, .92f), 20);
-        Spr("PLACEHOLDER_Handle", knife, new Vector2(-.35f, 0), new Vector2(.4f, .17f), new Color(.4f, .25f, .12f), 20);
-
-        var mapRoot = Empty("Map (Dungeon button)", hotspots, new Vector2(X2, .3f));
-        Spr("PLACEHOLDER_MapBorder", mapRoot, Vector2.zero, new Vector2(5.3f, 3.5f), new Color(.3f, .2f, .12f), 5);
-        Spr("PLACEHOLDER_MapParchment", mapRoot, Vector2.zero, new Vector2(5f, 3.2f), new Color(.85f, .76f, .55f), 6);
-        Vector2[] isl = { new Vector2(-1.6f, -.7f), new Vector2(.8f, .3f), new Vector2(-.6f, .9f), new Vector2(1.7f, -.8f) };
-        for (int i = 0; i < isl.Length; i++)
-            Spr("PLACEHOLDER_Island_" + (i + 1), mapRoot, isl[i], new Vector2(.9f, .65f), new Color(.3f, .55f, .3f), 7, true);
+        // ---- STOP 2 (x=40): the map on the table = Dungeon Mode
+        var mapRoot = Empty("Map (Dungeon button)", hotspots, PxAt(2, 845f, 398f));
+        Box(mapRoot.gameObject, Vector2.zero, new Vector2(1195f * WU, 614f * WU));
 
         var ringGo = new GameObject("IslandCircle (LineRenderer, move onto any island)");
         ringGo.transform.SetParent(mapRoot, false);
-        ringGo.transform.localPosition = isl[1];
+        ringGo.transform.position = new Vector3(PxAt(2, 829f, 369f).x, PxAt(2, 829f, 369f).y, 0f);   // the middle island
         var ring = ringGo.AddComponent<LineRenderer>();
         ring.sharedMaterial = spriteMat;
         ring.startColor = ring.endColor = new Color(.85f, .1f, .1f);
@@ -225,21 +187,16 @@ public static class LobbyBuilder
         ring.numCapVertices = 4;
         ring.sortingOrder = 15;
 
-        Box(mapRoot.gameObject, Vector2.zero, new Vector2(5.3f, 3.5f));
         var dungeon = mapRoot.gameObject.AddComponent<DungeonTableHotspot>();
-        dungeon.rig = rig; dungeon.ring = ring; dungeon.knife = knife; dungeon.knifeStart = knifeStart;
+        dungeon.rig = rig; dungeon.ring = ring;
+        dungeon.ringRadius = 105f * WU;                    // knife / knifeStart are optional (painted map)
 
-        // ===== STOP 3 (x=60): exit door =====
-        var door = Empty("ExitDoor (stop 3)", hotspots, new Vector2(X3, 0));
-        Spr("PLACEHOLDER_Frame", door, new Vector2(0, -.15f), new Vector2(3.6f, 5.7f), new Color(.3f, .2f, .13f), 3);
-        Spr("PLACEHOLDER_OutsideLight", door, new Vector2(0, -.3f), new Vector2(3f, 5.4f), new Color(1f, .95f, .75f), 4);
-        var pivot = Empty("DoorPivot (hinge)", door, new Vector2(-1.5f, 0));
-        Spr("PLACEHOLDER_DoorLeaf", pivot, new Vector2(1.5f, -.3f), new Vector2(3f, 5.4f), new Color(.5f, .33f, .2f), 5);
-        Spr("PLACEHOLDER_Knob", pivot, new Vector2(2.6f, -.4f), new Vector2(.25f, .25f), gold, 6, true);
-
-        Box(door.gameObject, new Vector2(0, -.15f), new Vector2(3.6f, 5.7f));
+        // ---- STOP 3 (x=60): the double door = Exit
+        var door = Empty("ExitDoor (stop 3)", hotspots, PxAt(3, 834f, 341f));
+        Box(door.gameObject, Vector2.zero, new Vector2(453f * WU, 565f * WU));
         var exit = door.gameObject.AddComponent<ExitDoorHotspot>();
-        exit.rig = rig; exit.doorPivot = pivot;
+        exit.rig = rig;                                    // doorPivot is optional (painted door)
+        door.gameObject.AddComponent<PaintedGlow>();
 
         // ---- wire input
         LobbyHotspotInput input = cam.gameObject.AddComponent<LobbyHotspotInput>();
@@ -250,6 +207,40 @@ public static class LobbyBuilder
         EditorSceneManager.SaveScene(scene, scenePath);
         EnsureInBuildSettings(scenePath);
         Debug.Log("Oddyseus: Lobby (remastered) built at " + scenePath + ". Press Play from the Title or Lobby scene.");
+    }
+
+    // Fits a PNG by its VISIBLE pixels: trims the transparent margin, scales the figure to heightBg background
+    // pixels tall and stands its bottom centre on feetWorld. Works for any PNG size. Needs a readable texture.
+    static GameObject AutoFit(string name, Transform parent, string path, Vector2 feetWorld, float heightBg, int order)
+    {
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        if (sprite == null || tex == null) return null;
+        int w = tex.width, h = tex.height;
+        Color32[] px = tex.GetPixels32();
+        int minX = w, minY = h, maxX = -1, maxY = -1;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                if (px[y * w + x].a > 8)
+                {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+        if (maxX < 0) { Debug.LogWarning("Oddyseus: " + path + " is fully transparent."); return null; }
+
+        float s = heightBg * WU / (maxY - minY + 1);                  // world units per sprite pixel
+        float cx = (minX + maxX + 1) * 0.5f;
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.position = new Vector3(feetWorld.x + (w * 0.5f - cx) * s, feetWorld.y + (h * 0.5f - minY) * s, 0f);
+        go.transform.localScale = new Vector3(s * 100f, s * 100f, 1f);   // sprite PPU is 100
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.sharedMaterial = spriteMat;
+        sr.sortingOrder = order;
+        return go;
     }
 
     // Puts a sprite on screen so that its non-transparent box is centred on targetWorld.
@@ -316,7 +307,7 @@ public static class LobbyBuilder
         return cam;
     }
 
-    static void ConfigureSprite(string path, float ppu)
+    static void ConfigureSprite(string path, float ppu, bool readable = false)
     {
         TextureImporter ti = AssetImporter.GetAtPath(path) as TextureImporter;
         if (ti == null) { Debug.LogWarning("Lobby art missing: " + path); return; }
@@ -328,6 +319,7 @@ public static class LobbyBuilder
         ti.filterMode = FilterMode.Bilinear;
         ti.maxTextureSize = 2048;
         ti.textureCompression = TextureImporterCompression.Uncompressed;
+        ti.isReadable = readable;
         ti.SaveAndReimport();
     }
 

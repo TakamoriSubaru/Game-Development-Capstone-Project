@@ -37,6 +37,8 @@ public class UIKitArtImporter : AssetPostprocessor
         else if (n == "pa_plate")     { ppu = 200f; border = new Vector4(60, 40, 60, 40); }
         else if (n.StartsWith("pa_btn_")) { ppu = 200f; border = new Vector4(64, 44, 64, 44); }
         else if (n == "pa_slider")    { ppu = 200f; border = new Vector4(40, 0, 40, 0); }
+        else if (n == "pa_slider_track") { ppu = 200f; border = new Vector4(52, 0, 52, 0); }   // end caps are 52 px wide
+        else if (n == "pa_slider_fill")  { ppu = 200f; border = new Vector4(14, 0, 2, 0); }    // rounded left end, flat right end
 
         ti.spritePixelsPerUnit = ppu;
         ti.spriteBorder = border;

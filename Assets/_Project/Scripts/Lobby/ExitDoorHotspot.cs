@@ -5,6 +5,8 @@ using UnityEngine;
 /// LAST stop. The door is the Exit button. Starts closed, cracks open a little on hover,
 /// swings fully open on click, then the app quits (stops play mode in the Editor).
 /// The door "opens" by squeezing the leaf's width toward the hinge (doorPivot scale X).
+/// PAINTED MODE: when 'doorPivot' is empty (the door is only painted) there is no swing: the camera zooms into the
+/// door while the screen fades out, then the app quits. Hover feedback = PaintedGlow on the same object.
 /// </summary>
 public class ExitDoorHotspot : Hotspot
 {
@@ -20,6 +22,7 @@ public class ExitDoorHotspot : Hotspot
 
     void Update()
     {
+        if (doorPivot == null) return;
         current = Mathf.Lerp(current, target, 1f - Mathf.Exp(-(opened ? 5f : 9f) * Time.deltaTime));
         var s = doorPivot.localScale;
         s.x = Mathf.Lerp(1f, fullOpenScaleX, current);
@@ -43,6 +46,7 @@ public class ExitDoorHotspot : Hotspot
         opened = true;
         target = 1f;
         rig.InputLocked = true;
+        if (doorPivot == null) rig.Focus(transform, 3.4f);   // painted door: zoom into it
         StartCoroutine(QuitRoutine());
     }
 

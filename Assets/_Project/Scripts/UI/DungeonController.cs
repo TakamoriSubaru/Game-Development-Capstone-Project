@@ -1,471 +1,458 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Oddyseus.Core;
 
 namespace Oddyseus.UI
 {
-    // Nilai Equipment dan Resource dipertahankan agar kode lain (view) yang memakainya tetap compile.
-    public enum Tab { Home, Equipment, Resource, Party }
-
-    // Pasang di satu GameObject kosong di scene Dungeon.
-    // Mengatur Hub dan layar turunannya, top bar permanen, layar-layar run (pilih map, peta, party), pop-up, dan pengaturan.
-    public class DungeonController : MonoBehaviour
+    // Palet tema "Warm Parchment Gouache" untuk Hub dan layar turunannya. Teks selalu DarkBrown.
+    public static class Parch
     {
-        RectTransform canvas, area, modalLayer;
-        TopBarView topBar;
-        HubView hubView;
-        LegendsView legendsView;
-        CompendiumView compendiumView;
-        ArmoryView armoryView;
-        AchievementsView achievementsView;
-        SelectMapView selectView;
-        MapView mapView;
-        PartyView partyView;
-        ShopView shopView;
-        BattleView battleView;
-        Tab tab = Tab.Home;
-        Text toast;
-        GameObject toastBox;
-        float toastUntil;
+        public static readonly Color Parchment = Theme.Hex("#F7EEDC");
+        public static readonly Color Terracotta = Theme.Hex("#C97A52");
+        public static readonly Color Olive = Theme.Hex("#6B8F5B");
+        public static readonly Color DarkBrown = Theme.Hex("#4B3B2E");
+        public static readonly Color Gold = Theme.Hex("#EBB24E");
+        public static readonly Color Muted = Theme.Hex("#8A7560");
+        public static readonly Color Danger = Theme.Hex("#B5483A");
+        public static readonly Color Disabled = new Color(0.55f, 0.5f, 0.45f, 1f);
+    }
+}
 
-        void Awake()
+namespace Oddyseus.UI
+{
+    // Tombol bergambar: simpan warna dasar dan label supaya SetEnabled bisa meredupkan keduanya.
+    public class UiBtn : MonoBehaviour
+    {
+        public Image Img;
+        public Text Label;
+        public Color Tint = Color.white;
+    }
+
+    // Kartu Pack (gulungan): hover = ganti sprite, ditekan = sedikit mengecil.
+    public class ScrollCard : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
+    {
+        public Image Img;
+        public Sprite Normal, Hover;
+        public Transform Scaled;      // yang diskalakan saat ditekan (seluruh kartu); kosong = objek ini
+        bool over, down;
+
+        Transform Target { get { return Scaled != null ? Scaled : transform; } }
+
+        void Apply()
         {
-            MetaProgress.SavePath = System.IO.Path.Combine(Application.persistentDataPath, "oddyseus_meta.txt");
-            MetaProgress.Load();
-
-            DungeonState.EnsureDungeon();
-            UIFactory.EnsureEventSystem();
-            Build();
-            ShowTab(Tab.Home);
-            ShowHub();
+            if (Hover != null) Img.sprite = over ? Hover : Normal;
+            Target.localScale = down ? new Vector3(0.97f, 0.97f, 1f) : Vector3.one;
         }
+        public void OnPointerEnter(PointerEventData e) { over = true; Apply(); }
+        public void OnPointerExit(PointerEventData e) { over = false; down = false; Apply(); }
+        public void OnPointerDown(PointerEventData e) { down = true; Apply(); }
+        public void OnPointerUp(PointerEventData e) { down = false; Apply(); }
+        void OnDisable() { over = false; down = false; if (Img != null) { Img.sprite = Normal; Target.localScale = Vector3.one; } }
+    }
 
-        void Update()
+    // Deretan tab pakai sprite tab_selected / tab_unselected. Hover, pressed, disabled lewat ColorTint.
+    public class TabBar
+    {
+        public readonly RectTransform Root;
+        readonly Image[] imgs;
+        readonly Text[] labels;
+        readonly Action<int> onChange;
+        public int Selected { get; private set; }
+
+        public TabBar(Transform parent, string[] names, float x0, float y0, float x1, float y1, Action<int> onChange, int fontSize = 22)
         {
-            if (toastBox != null && toastBox.activeSelf && Time.unscaledTime > toastUntil)
-                toastBox.SetActive(false);
-        }
-
-        void Build()
-        {
-            canvas = UIFactory.CreateCanvas("DungeonCanvas");
-            UIFactory.Panel(canvas, "Bg", HubTheme.Night, 0f, 0f, 1f, 1f, false);
-
-            // Top bar 2 baris: [Party] | Men Food | [Gear] / equipment | blessing | Floor
-            topBar = TopBarView.Create(canvas);
-            topBar.PartyClicked += () => OnTab(Tab.Party);
-            topBar.SettingsClicked += ShowSettings;
-
-            // Area utama: mulai tepat di bawah top bar.
-            var frame = UIFactory.Panel(canvas, "Area", HubTheme.Night, 0.03f, 0.03f, 0.97f, 1f, true);
-            HubTheme.Frame(frame, HubTheme.Bronze);
-            var fr = frame.rectTransform;
-            fr.offsetMax = new Vector2(fr.offsetMax.x, -(TopBarView.BarHeight + 10f));
-            area = fr;
-
-            selectView = new SelectMapView(); selectView.Init(area, this, "SelectMap");
-            mapView = new MapView(); mapView.Init(area, this, "Map");
-            partyView = new PartyView(); partyView.Init(area, this, "Party");
-            shopView = new ShopView(); shopView.Init(area, this, "Shop");
-            battleView = BattleView.Create(area, this, Toast);   // di atas view lain, di bawah toast dan modal
-
-            // Hub dan layar turunannya menutupi seluruh layar; toast dan modal dibuat sesudahnya agar tetap di atas.
-            hubView = new HubView(); hubView.Init(canvas, this, "Hub");
-            legendsView = new LegendsView(); legendsView.Init(canvas, this, "Legends");
-            compendiumView = new CompendiumView(); compendiumView.Init(canvas, this, "Compendium");
-            armoryView = new ArmoryView(); armoryView.Init(canvas, this, "Armory");
-            achievementsView = new AchievementsView(); achievementsView.Init(canvas, this, "Achievements");
-
-            // Tombol uji (hanya Editor dan Development Build), tampil di pita bawah Hub.
-            if (Debug.isDebugBuild)
-            {
-                HubUI.Btn(hubView.Root, "DbgRelic", "DEBUG: +RELIC", null, HubTheme.Panel, HubTheme.Muted,
-                          0.02f, 0.008f, 0.19f, 0.052f, DebugAddRelic, 14);
-                HubUI.Btn(hubView.Root, "DbgBless", "DEBUG: +BLESSING", null, HubTheme.Panel, HubTheme.Muted,
-                          0.20f, 0.008f, 0.40f, 0.052f, DebugAddBlessing, 14);
-            }
-
-            var toastBg = HubUI.Card(canvas, "Toast", HubTheme.Deep, 0.25f, 0.045f, 0.75f, 0.11f, HubTheme.Gold);
-            toast = UIFactory.Label(toastBg.transform, "", 22, HubTheme.Marble, TextAnchor.MiddleCenter, 0.02f, 0f, 0.98f, 1f);
-            toastBox = toastBg.gameObject;
-            toastBox.SetActive(false);
-
-            var ml = UIFactory.NewRect(canvas, "ModalLayer");
-            UIFactory.Stretch(ml, 0f, 0f, 1f, 1f);
-            modalLayer = ml;
-            modalLayer.gameObject.SetActive(false);
-        }
-
-        // ---------- Hub ----------
-
-        public void ShowHub()
-        {
-            hubView.Show(true);
-            UIEffects.PopIn(hubView.Root);
-        }
-
-        // Tombol Enter/Continue di Hub: tutup Hub, lanjut ke peta atau Select Map.
-        public void EnterFromHub()
-        {
-            hubView.Show(false);
-            ShowTab(Tab.Home);
-        }
-
-        public void OpenLegends() { OpenSub(legendsView); }
-        public void OpenCompendium() { OpenSub(compendiumView); }
-        public void OpenArmory() { OpenSub(armoryView); }
-        public void OpenAchievements() { OpenSub(achievementsView); }
-
-        void OpenSub(View v)
-        {
-            v.Show(true);
-            UIEffects.PopIn(v.Root);
-        }
-
-        public void CloseSub(View v)
-        {
-            v.Show(false);
-        }
-
-        // ---------- Uji ----------
-
-        void DebugAddRelic()
-        {
-            int n = DungeonState.Equipment.Count + 1;
-            DungeonState.AddRelic(new Relic { Name = "Relic " + n, Description = "Debug", IsGod = false });
-            RefreshTopBar();
-            Toast("Debug: equipment ditambah (" + n + ").");
-        }
-
-        void DebugAddBlessing()
-        {
-            string[] gods = { "Apollo", "Athena", "Ares", "Hephaestus", "Artemis", "Demeter", "Hermes", "Zeus" };
-            string g = gods[DungeonState.God.Count % gods.Length];
-            DungeonState.AddRelic(new Relic { Name = g, Description = "Debug", IsGod = true });
-            RefreshTopBar();
-            Toast("Debug: Blessing " + g + " (" + DungeonState.BlessingBattles + " battle).");
-        }
-
-        // ---------- Achievement ----------
-
-        void CheckAchievements() { Announce(AchievementCatalog.CheckUnlocks()); }
-
-        public void Announce(List<Achievement> fresh)
-        {
-            if (fresh == null || fresh.Count == 0) return;
-            string msg = "Achievement unlocked: " + fresh[0].Name;
-            if (fresh.Count > 1) msg += " (+" + (fresh.Count - 1) + " more)";
-            Toast(msg);
-        }
-
-        // Pack yang ditawarkan di Select Map dianggap "ditemukan" (Pack Compendium).
-        void MarkOfferedSeen()
-        {
-            for (int i = 0; i < DungeonState.Offered.Count; i++) MetaProgress.MarkPackSeen(DungeonState.Offered[i].Id);
-            CheckAchievements();
-        }
-
-        // Top bar: Floor, Men, Food, equipment, dan Blessing (dengan sisa battle) dari status run.
-        void RefreshTopBar()
-        {
-            topBar.SetMap(DungeonState.Floor, DungeonState.Floors);
-            topBar.SetResources(RunState.Men, RunState.Food);
-
-            var eq = new List<string>();
-            for (int i = 0; i < DungeonState.Equipment.Count; i++)
-                if (DungeonState.Equipment[i] != null) eq.Add(DungeonState.Equipment[i].Name);
-            topBar.SetEquipment(eq);
-
-            var gods = new List<string>();
-            for (int i = 0; i < DungeonState.God.Count; i++)
-                if (DungeonState.God[i] != null) gods.Add(DungeonState.God[i].Name + "\n" + DungeonState.God[i].BattlesLeft);
-            topBar.SetBuffs(gods);
-        }
-
-        // ---------- Tab ----------
-
-        void OnTab(Tab t)
-        {
-            if (battleView != null && battleView.Active) { Toast("Sedang battle."); return; }
-            if (shopView != null && shopView.Root.gameObject.activeSelf) { Toast("Selesaikan belanja dulu."); return; }
-            ShowTab(tab == t ? Tab.Home : t);
-        }
-
-        public void ShowTab(Tab t)
-        {
-            // Equipment dan Resource sudah pindah ke top bar, bukan layar lagi.
-            if (t == Tab.Equipment || t == Tab.Resource) t = Tab.Home;
-            tab = t;
-            selectView.Show(false); mapView.Show(false); partyView.Show(false);
-            switch (t)
-            {
-                case Tab.Party: partyView.Show(true); break;
-                default:
-                    if (DungeonState.InMap) mapView.Show(true);
-                    else { MarkOfferedSeen(); selectView.Show(true); }
-                    break;
-            }
-            RefreshTopBar();
-        }
-
-        public void RefreshHome() { ShowTab(Tab.Home); }
-
-        // Dipakai ShopView: perbarui Men, Food, dan equipment di top bar tanpa mengganti layar.
-        public void RefreshBars() { RefreshTopBar(); }
-
-        // Buka Shop. closed(true) kalau ada yang dibeli.
-        public void OpenShop(int seed, Action<bool> closed) { shopView.Open(seed, closed); }
-
-        public void Toast(string msg)
-        {
-            toast.text = msg;
-            toastBox.SetActive(true);
-            toastBox.transform.SetAsLastSibling();
-            UIEffects.PopIn(toastBox.transform);
-            toastUntil = Time.unscaledTime + 2.2f;
-        }
-
-        // ---------- Pilih map dan node ----------
-
-        public void OnMapChosen(int index)
-        {
-            DungeonState.SelectMap(index);
-            ShowTab(Tab.Home);
-        }
-
-        public void OnNodeClicked(int id)
-        {
-            if (!DungeonState.CanEnter(id))
-            {
-                Toast("Pilih node yang terhubung dengan posisimu.");
-                return;
-            }
-            var node = DungeonState.Enter(id);
-            var type = node.Type;
-            mapView.Refresh();
-
-            // Battle, Elite, dan Boss memakai battle sungguhan; node lain masih placeholder.
-            if (type == NodeType.Battle || type == NodeType.Elite || type == NodeType.Boss)
-            {
-                if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
-                StartBattle(type);
-                return;
-            }
-
-            // Resource dan Rest Stop punya layar sendiri (NodeScreens). Node lain masih placeholder.
-            if (type == NodeType.Resource)
-            {
-                if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
-                NodeScreens.Resource(this, node.Id, () => AfterSimpleNode(type));
-                return;
-            }
-            if (type == NodeType.Rest || type == NodeType.Shop)
-            {
-                if (node.WasRandom) Toast("The ? node became: " + NodeInfo.Name(type) + ".");
-                NodeScreens.RestStop(this, node.Id, () => AfterSimpleNode(type));
-                return;
-            }
-
-            string body = NodeInfo.Desc(node.Type);
-            if (node.WasRandom) body = "The ? node became: " + NodeInfo.Name(node.Type) + ".\n\n" + body;
-            body += "\n\n(Placeholder: mekanik node ini belum dibuat. Tekan Continue untuk lanjut.)";
-            ShowModal(NodeInfo.Name(node.Type), body, new[] { "Continue" }, new Action[] { () => AfterNode(type) });
-        }
-
-        void StartBattle(NodeType type)
-        {
-            bool started = battleView.Begin(new List<int>(DungeonState.Party), RunState.SelectedEnv,
-                                            victory => AfterBattle(type, victory));
-            if (!started)
-            {
-                ShowModal("Run berakhir", "Tidak ada karakter yang siap bertarung (gugur atau Stamina habis).",
-                          new[] { "Main Menu" }, new Action[] { FinishRun });
-                return;
-            }
-            RefreshTopBar();   // Food sudah terpotong oleh PrepareBattle
-        }
-
-        void AfterBattle(NodeType type, bool victory)
-        {
-            RefreshTopBar();
-            if (!victory)
-            {
-                bool anyAlive = false;
-                for (int i = 0; i < RunState.Roster.Count; i++)
-                    if (RunState.Roster[i].Alive) anyAlive = true;
-                // Kalah di Boss, Men habis, atau semua karakter gugur: run berakhir.
-                if (type == NodeType.Boss || RunState.RunOver || !anyAlive)
-                {
-                    ShowModal("Run berakhir", "Party kalah dan tidak bisa melanjutkan.",
-                              new[] { "Main Menu" }, new Action[] { FinishRun });
-                    return;
-                }
-            }
-            AfterNode(type, victory);
-        }
-
-        // Setelah node Resource atau Rest Stop: Men habis berarti run berakhir, selain itu lanjut seperti biasa.
-        void AfterSimpleNode(NodeType type)
-        {
-            RefreshTopBar();
-            if (RunState.RunOver)
-            {
-                ShowModal("Run berakhir", "Men habis. Kru tidak cukup untuk mendayung.",
-                          new[] { "Main Menu" }, new Action[] { FinishRun });
-                return;
-            }
-            AfterNode(type);
-        }
-
-        void AfterNode(NodeType type, bool cleared = true)
-        {
-            if (type == NodeType.GodRealm) MetaProgress.Add("stat.godRealms");
-            if (type == NodeType.Boss && cleared && DungeonState.CurrentPack != null) MetaProgress.MarkPackCleared(DungeonState.CurrentPack.Id);
-
-            string expiredMsg = null;
-            if (type == NodeType.Battle || type == NodeType.Elite || type == NodeType.Boss)
-            {
-                var gone = DungeonState.TickBlessings();
-                if (gone.Count > 0) expiredMsg = "Blessing faded: " + string.Join(", ", gone.ToArray());
-            }
-
-            var fresh = AchievementCatalog.CheckUnlocks();
-            RefreshTopBar();
-            if (expiredMsg != null && fresh.Count > 0) Toast(expiredMsg + "  |  Achievement: " + fresh[0].Name);
-            else if (expiredMsg != null) Toast(expiredMsg);
-            else Announce(fresh);
-
-            if (DungeonState.AtActEnd) { ActEnd(); return; }
-            mapView.Refresh();
-        }
-
-        void ActEnd()
-        {
-            int actDone = DungeonState.Act, floorDone = DungeonState.Floor;
-            var res = DungeonState.FinishAct();
-            switch (res)
-            {
-                case ActEndResult.NextAct:
-                    ShowModal("Act " + actDone + " complete", "Act 2 begins.", new[] { "Continue" }, new Action[] { RefreshHome });
-                    break;
-                case ActEndResult.NextFloor:
-                    ShowModal("Floor " + floorDone + " cleared", "Choose a Map for Floor " + DungeonState.Floor + ".",
-                              new[] { "Continue" }, new Action[] { RefreshHome });
-                    break;
-                default:
-                    ShowModal("Dungeon complete", "You cleared all " + DungeonState.Floors + " Floors.",
-                              new[] { "Main Menu" }, new Action[] { FinishRun });
-                    MetaProgress.Add("stat.runsCompleted");
-                    CheckAchievements();   // dipanggil setelah modal dibuka agar toast tampil di atasnya
-                    break;
-            }
-        }
-
-        void FinishRun()
-        {
-            DungeonState.Active = false;
-            SceneFader.LoadScene(GameScenes.Lobby);
-        }
-
-        // ---------- Pop-up ----------
-
-        public void CloseModal()
-        {
-            UIFactory.ClearChildren(modalLayer);
-            modalLayer.gameObject.SetActive(false);
-        }
-
-        RectTransform OpenModalLayer()
-        {
-            UIFactory.ClearChildren(modalLayer);
-            modalLayer.gameObject.SetActive(true);
-            modalLayer.SetAsLastSibling();
-            UIFactory.Panel(modalLayer, "Dim", Theme.Dim, 0f, 0f, 1f, 1f, false);
-            return modalLayer;
-        }
-
-        // Tombol terakhir = aksi utama (emas); tombol lain (mis. Cancel) bergaya sekunder.
-        public void ShowModal(string title, string body, string[] labels, Action[] actions)
-        {
-            var layer = OpenModalLayer();
-            var box = HubUI.Card(layer, "Box", HubTheme.Deep, 0.27f, 0.26f, 0.73f, 0.74f, HubTheme.Bronze);
-            UIEffects.PopIn(box);
-            UIFactory.Label(box.transform, title, 30, HubTheme.Marble, TextAnchor.MiddleLeft, 0.06f, 0.80f, 0.94f, 0.96f);
-            HubUI.Flat(box.transform, "Divider", HubTheme.Bronze, 0.06f, 0.785f, 0.94f, 0.792f);
-            UIFactory.Label(box.transform, body, 20, HubTheme.Marble, TextAnchor.UpperLeft, 0.06f, 0.30f, 0.94f, 0.76f);
-            int n = labels.Length;
+            this.onChange = onChange;
+            Root = UIFactory.NewRect(parent, "Tabs");
+            UIFactory.Stretch(Root, x0, y0, x1, y1);
+            int n = names.Length;
+            imgs = new Image[n];
+            labels = new Text[n];
+            float w = 1f / n;
             for (int i = 0; i < n; i++)
             {
                 int k = i;
-                bool primary = i == n - 1;
-                float w = 0.9f / n;
-                float x0 = 0.05f + i * w + 0.01f, x1 = 0.05f + (i + 1) * w - 0.01f;
-                HubUI.Btn(box.transform, "Btn" + i, labels[i], null,
-                          primary ? HubTheme.Gold : HubTheme.Panel, primary ? HubTheme.Night : HubTheme.Marble,
-                          x0, 0.06f, x1, 0.24f, () => { CloseModal(); if (actions[k] != null) actions[k](); }, 24);
+                var img = ParchUI.Sliced(Root, "Tab" + i, "buttons/tab_unselected", i * w + 0.004f, 0f, (i + 1) * w - 0.004f, 1f, 0.5f);
+                img.raycastTarget = true;
+                var b = img.gameObject.AddComponent<Button>();
+                b.targetGraphic = img;
+                b.navigation = new Navigation { mode = Navigation.Mode.None };
+                var cb = b.colors;
+                cb.normalColor = Color.white;
+                cb.highlightedColor = new Color(1f, 0.95f, 0.82f, 1f);
+                cb.pressedColor = new Color(0.8f, 0.7f, 0.56f, 1f);
+                cb.selectedColor = Color.white;
+                cb.disabledColor = new Color(0.6f, 0.6f, 0.6f, 0.6f);
+                cb.fadeDuration = 0.08f;
+                b.colors = cb;
+                b.onClick.AddListener(() => Select(k, true));
+                imgs[i] = img;
+                labels[i] = ParchUI.Txt(img.transform, names[i], fontSize, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.06f, 0.08f, 0.94f, 0.92f, true);
+            }
+            Selected = -1;
+        }
+
+        public void Select(int i, bool notify)
+        {
+            Selected = i;
+            for (int k = 0; k < imgs.Length; k++)
+            {
+                imgs[k].sprite = UISprites.Get(k == i ? "buttons/tab_selected" : "buttons/tab_unselected");
+                labels[k].color = k == i ? Parch.DarkBrown : Parch.Muted;
+            }
+            if (notify && onChange != null) onChange(i);
+        }
+    }
+
+    // Pembuat widget bergambar. Semua posisi = anchor 0..1 relatif terhadap induk (sama seperti UIFactory).
+    public static class ParchUI
+    {
+        // Kotak 16:9 terbesar yang muat di layar; isi layar dibangun di dalamnya (latar tetap memenuhi layar).
+        public static RectTransform SafeArea(Transform canvas)
+        {
+            var rt = UIFactory.NewRect(canvas, "SafeArea");
+            UIFactory.Stretch(rt, 0f, 0f, 1f, 1f);
+            var f = rt.gameObject.AddComponent<AspectRatioFitter>();
+            f.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            f.aspectRatio = 16f / 9f;
+            return rt;
+        }
+
+        public static Image Pic(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1, bool preserve = true)
+        {
+            var rt = UIFactory.NewRect(parent, name);
+            UIFactory.Stretch(rt, x0, y0, x1, y1);
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = UISprites.Get(sprite);
+            img.preserveAspect = preserve;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        // Gambar yang selalu pas di dalam kotak dengan rasio aslinya. Anak-anaknya memakai anchor relatif ke gambar.
+        public static Image FitPic(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1)
+        {
+            var box = UIFactory.NewRect(parent, name + "Box");
+            UIFactory.Stretch(box, x0, y0, x1, y1);
+            var rt = UIFactory.NewRect(box, name);
+            UIFactory.Stretch(rt, 0f, 0f, 1f, 1f);
+            var s = UISprites.Get(sprite);
+            var fit = rt.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fit.aspectRatio = s != null ? s.rect.width / s.rect.height : 1f;
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = s;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        // Kotak kosong dengan rasio tetap (lebar/tinggi), rata tengah di dalam area.
+        public static RectTransform FitRect(Transform parent, string name, float x0, float y0, float x1, float y1, float aspect)
+        {
+            var box = UIFactory.NewRect(parent, name + "Box");
+            UIFactory.Stretch(box, x0, y0, x1, y1);
+            var rt = UIFactory.NewRect(box, name);
+            UIFactory.Stretch(rt, 0f, 0f, 1f, 1f);
+            var fit = rt.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fit.aspectRatio = aspect;
+            return rt;
+        }
+
+        public static Text Field(Transform parent, string label, string value, int size, float x0, float y0, float x1, float y1,
+                                 TextAnchor align = TextAnchor.UpperLeft)
+        {
+            string hex = ColorUtility.ToHtmlStringRGB(Parch.Muted);
+            return Txt(parent, "<color=#" + hex + ">" + label + "</color>  " + value, size, Parch.DarkBrown, align, x0, y0, x1, y1);
+        }
+
+        // Frame 9-slice. borderScale < 1 mengecilkan dekorasi sudut.
+        public static Image Sliced(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1, float borderScale)
+        {
+            var rt = UIFactory.NewRect(parent, name);
+            UIFactory.Stretch(rt, x0, y0, x1, y1);
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = UISprites.Get(sprite);
+            img.type = Image.Type.Sliced;
+            img.pixelsPerUnitMultiplier = borderScale;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        public static Image Panel9(Transform parent, string name, float x0, float y0, float x1, float y1, float borderScale = 0.5f)
+        {
+            return Sliced(parent, name, "frames/frame_panel_large", x0, y0, x1, y1, borderScale);
+        }
+
+        public static Image Solid(Transform parent, string name, Color c, float x0, float y0, float x1, float y1)
+        {
+            var rt = UIFactory.NewRect(parent, name);
+            UIFactory.Stretch(rt, x0, y0, x1, y1);
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = UISprites.White;
+            img.color = c;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        // Teks asli (tidak pernah dipanggang ke gambar). title = Cinzel bold, selain itu EB Garamond.
+        public static Text Txt(Transform parent, string text, int size, Color color, TextAnchor align,
+                               float x0, float y0, float x1, float y1, bool title = false)
+        {
+            var t = UIFactory.Label(parent, text, size, color, align, x0, y0, x1, y1);
+            Font body = UISprites.BodyFont;
+            if (body != null) t.font = body;
+            if (title)
+            {
+                var f = UISprites.TitleFont;
+                if (f != null) t.font = f;
+                t.fontStyle = FontStyle.Bold;
+            }
+            return t;
+        }
+
+        // ---------- tombol ----------
+
+        // Tombol pill: set = "parchment" | "terracotta" | "alt". Empat state (normal, hover, pressed, disabled) lewat SpriteSwap.
+        public static Button Pill(Transform parent, string name, string label, string set, Color tint,
+                                  float x0, float y0, float x1, float y1, Action onClick, int fontSize = 22, float borderScale = 0.55f)
+        {
+            string p = "buttons/btn_" + set + "_";
+            var img = Sliced(parent, name, p + "normal", x0, y0, x1, y1, borderScale);
+            img.color = tint;
+            img.raycastTarget = true;
+            var b = img.gameObject.AddComponent<Button>();
+            b.targetGraphic = img;
+            b.transition = Selectable.Transition.SpriteSwap;
+            b.spriteState = new SpriteState
+            {
+                highlightedSprite = UISprites.Get(p + "hover"),
+                pressedSprite = UISprites.Get(p + "pressed"),
+                selectedSprite = UISprites.Get(p + "normal"),
+                disabledSprite = UISprites.Get(p + "disabled"),
+            };
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            if (onClick != null) b.onClick.AddListener(() => onClick());
+            var t = Txt(img.transform, label, fontSize, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.08f, 0.12f, 0.92f, 0.88f, true);
+            var meta = img.gameObject.AddComponent<UiBtn>();
+            meta.Img = img; meta.Label = t; meta.Tint = tint;
+            return b;
+        }
+
+        public static Button Pill(Transform parent, string name, string label, string set,
+                                  float x0, float y0, float x1, float y1, Action onClick, int fontSize = 22, float borderScale = 0.55f)
+        {
+            return Pill(parent, name, label, set, Color.white, x0, y0, x1, y1, onClick, fontSize, borderScale);
+        }
+
+        public static readonly Color GoldTint = new Color(0.98f, 0.80f, 0.30f, 1f);
+
+        public static void SetEnabled(Button b, bool on)
+        {
+            b.interactable = on;
+            var m = b.GetComponent<UiBtn>();
+            if (m == null) return;
+            m.Img.color = on ? m.Tint : Color.Lerp(m.Tint, new Color(0.62f, 0.58f, 0.54f, 1f), 0.65f);
+            m.Label.color = on ? Parch.DarkBrown : Parch.Disabled;
+        }
+
+        // Tombol dari satu sprite (menu hub, kartu, slot). Hover/pressed/disabled lewat ColorTint.
+        public static Button TintButton(Image img, Action onClick)
+        {
+            img.raycastTarget = true;
+            var b = img.gameObject.AddComponent<Button>();
+            b.targetGraphic = img;
+            b.navigation = new Navigation { mode = Navigation.Mode.None };
+            var cb = b.colors;
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(1f, 0.96f, 0.84f, 1f);
+            cb.pressedColor = new Color(0.8f, 0.7f, 0.55f, 1f);
+            cb.selectedColor = Color.white;
+            cb.disabledColor = new Color(0.65f, 0.65f, 0.65f, 0.75f);
+            cb.fadeDuration = 0.08f;
+            b.colors = cb;
+            if (onClick != null) b.onClick.AddListener(() => onClick());
+            return b;
+        }
+
+        // Tombol menu hub: frame_menu_button + ikon + judul + subjudul (semuanya teks asli).
+        public static Button MenuButton(Transform parent, string name, string icon, string title, string subtitle,
+                                        float x0, float y0, float x1, float y1, Action onClick)
+        {
+            var img = Sliced(parent, name, "frames/frame_menu_button", x0, y0, x1, y1, 0.6f);
+            var b = TintButton(img, onClick);
+            Pic(img.transform, "Icon", icon, 0.045f, 0.12f, 0.20f, 0.88f);
+            Txt(img.transform, title, 24, Parch.DarkBrown, TextAnchor.LowerLeft, 0.24f, 0.46f, 0.92f, 0.92f, true);
+            Txt(img.transform, subtitle, 16, Parch.Muted, TextAnchor.UpperLeft, 0.24f, 0.08f, 0.92f, 0.50f);
+            return b;
+        }
+
+        // ---------- bar ----------
+
+        // Bar progres: track bergambar + isi emas yang dihitung di kode.
+        public static Image ProgressBar(Transform parent, float fraction, float x0, float y0, float x1, float y1, float borderScale = 0.4f)
+        {
+            var track = Sliced(parent, "Bar", "bars/progress_track_empty", x0, y0, x1, y1, borderScale);
+            var inner = UIFactory.NewRect(track.transform, "Inner");
+            UIFactory.Stretch(inner, 0.12f, 0.30f, 0.88f, 0.70f);
+            var fill = Solid(inner, "Fill", Parch.Gold, 0f, 0f, Mathf.Clamp01(fraction), 1f);
+            return fill;
+        }
+
+        public static void SetBar(Image fill, float fraction)
+        {
+            fill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(fraction), 1f);
+        }
+
+        // ---------- daftar scroll ----------
+
+        public static ScrollRect VScroll(Transform parent, string name, float x0, float y0, float x1, float y1, out RectTransform content)
+        {
+            var root = UIFactory.NewRect(parent, name);
+            UIFactory.Stretch(root, x0, y0, x1, y1);
+            var hit = root.gameObject.AddComponent<Image>();
+            hit.color = new Color(0f, 0f, 0f, 0f);
+            var sr = root.gameObject.AddComponent<ScrollRect>();
+
+            var vp = UIFactory.NewRect(root, "Viewport");
+            UIFactory.Stretch(vp, 0f, 0f, 0.972f, 1f);
+            vp.gameObject.AddComponent<RectMask2D>();
+
+            content = UIFactory.NewRect(vp, "Content");
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.sizeDelta = Vector2.zero;
+
+            var track = Sliced(root, "Scrollbar", "bars/scrollbar_track_thin", 0.978f, 0f, 1f, 1f, 0.6f);
+            track.raycastTarget = true;
+            var sb = track.gameObject.AddComponent<Scrollbar>();
+            sb.direction = Scrollbar.Direction.BottomToTop;
+            var area = UIFactory.NewRect(track.transform, "SlidingArea");
+            UIFactory.Stretch(area, 0f, 0.01f, 1f, 0.99f);
+            var handle = Sliced(area, "Handle", "bars/scrollbar_thumb", 0f, 0f, 1f, 1f, 0.6f);
+            handle.raycastTarget = true;
+            sb.handleRect = handle.rectTransform;
+            sb.targetGraphic = handle;
+
+            sr.viewport = vp;
+            sr.content = content;
+            sr.horizontal = false;
+            sr.vertical = true;
+            sr.movementType = ScrollRect.MovementType.Clamped;
+            sr.scrollSensitivity = 30f;
+            sr.verticalScrollbar = sb;
+            sr.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            return sr;
+        }
+
+        // ---------- latar dan judul ----------
+
+        // parchment_base + vignette di atasnya. Memenuhi seluruh layar tanpa distorsi.
+        public static RectTransform Background(Transform canvas, bool topRight, bool bottomLeft, bool bottomRight, bool leftEdge)
+        {
+            var bg = UIFactory.NewRect(canvas, "Background");
+            UIFactory.Stretch(bg, 0f, 0f, 1f, 1f);
+            var baseRt = UIFactory.NewRect(bg, "Base");
+            UIFactory.Stretch(baseRt, 0f, 0f, 1f, 1f);
+            var fit = baseRt.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            fit.aspectRatio = 1672f / 940f;
+            var bi = baseRt.gameObject.AddComponent<Image>();
+            bi.sprite = UISprites.Get("backgrounds/parchment_base");
+            bi.raycastTarget = false;
+
+            if (topRight) Pic(bg, "VignetteTR", "backgrounds/vignette_top_right", 0.58f, 0.45f, 1f, 1f, false);
+            if (bottomLeft) Pic(bg, "VignetteBL", "backgrounds/vignette_bottom_left_a", 0f, 0f, 0.42f, 0.55f, false);
+            if (bottomRight) Pic(bg, "VignetteBR", "backgrounds/vignette_bottom_right", 0.58f, 0f, 1f, 0.55f, false);
+            if (leftEdge) Pic(bg, "VignetteL", "backgrounds/vignette_left_edge", 0f, 0f, 0.26f, 1f, false);
+            return bg;
+        }
+
+        // Judul besar (Cinzel) diapit daun, tombol BACK di kiri, pita Greek-key di bawahnya.
+        public static void TitleBar(Transform parent, string title, Action onBack, bool redStrip = false)
+        {
+            Pic(parent, "KeyStrip", redStrip ? "ornaments/key_strip_terracotta" : "ornaments/key_strip_brown", 0f, 0.868f, 1f, 0.905f, false);
+            Pic(parent, "SprigL", "ornaments/sprig_left", 0.255f, 0.915f, 0.335f, 0.99f);
+            Pic(parent, "SprigR", "ornaments/sprig_right", 0.665f, 0.915f, 0.745f, 0.99f);
+            Txt(parent, title, 48, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.31f, 0.91f, 0.69f, 0.995f, true);
+            if (onBack != null)
+            {
+                var b = Pill(parent, "Back", "BACK", "parchment", 0.045f, 0.925f, 0.17f, 0.985f, onBack, 22, 0.5f);
+                var m = b.GetComponent<UiBtn>();
+                m.Label.rectTransform.anchorMin = new Vector2(0.32f, 0.12f);
+                Pic(b.transform, "Icon", "icons/icon_ui_back", 0.12f, 0.18f, 0.32f, 0.82f);
             }
         }
 
-        // ---------- Pengaturan ----------
+        // ---------- chip dan lencana ----------
 
-        void ShowSettings()
+        public static void RoleChip(Transform parent, Role role, float x0, float y0, float x1, float y1)
         {
-            var layer = OpenModalLayer();
-            var box = HubUI.Card(layer, "Box", HubTheme.Deep, 0.24f, 0.16f, 0.76f, 0.84f, HubTheme.Bronze);
-            UIEffects.PopIn(box);
-            var t = box.transform;
-
-            UIFactory.Label(t, "SETTINGS", 30, HubTheme.Marble, TextAnchor.MiddleLeft, 0.05f, 0.86f, 0.70f, 0.97f);
-            HubUI.Btn(t, "Close", "X", null, HubTheme.Danger, Color.white, 0.90f, 0.87f, 0.97f, 0.96f, CloseModal, 20);
-            HubUI.Flat(t, "Divider", HubTheme.Bronze, 0.05f, 0.845f, 0.95f, 0.852f);
-
-            UIFactory.Label(t, "RUN", 14, HubTheme.Gold, TextAnchor.MiddleLeft, 0.05f, 0.77f, 0.50f, 0.83f);
-            HubUI.Btn(t, "Restart", "RESTART MAP", "Back to the first node", HubTheme.Panel, HubTheme.Marble,
-                      0.05f, 0.47f, 0.35f, 0.75f, ConfirmRestart, 20);
-            HubUI.Btn(t, "Reset", "RESET DUNGEON", "Start the run over", HubTheme.Panel, HubTheme.Marble,
-                      0.36f, 0.47f, 0.64f, 0.75f, ConfirmReset, 20);
-            HubUI.Btn(t, "Exit", "EXIT", "Back to the Lobby", HubTheme.Panel, HubTheme.Marble,
-                      0.65f, 0.47f, 0.95f, 0.75f, ExitToMenu, 20);
-
-            UIFactory.Label(t, "AUDIO", 14, HubTheme.Gold, TextAnchor.MiddleLeft, 0.05f, 0.38f, 0.50f, 0.44f);
-            VolumeRow(t, "Music", "music", 0.25f, 0.35f, true);
-            VolumeRow(t, "SFX", "sfx", 0.10f, 0.20f, false);
-        }
-
-        void VolumeRow(Transform parent, string label, string key, float y0, float y1, bool master)
-        {
-            UIFactory.Label(parent, label, 20, HubTheme.Marble, TextAnchor.MiddleLeft, 0.05f, y0, 0.20f, y1);
-            var pct = UIFactory.Label(parent, "", 18, HubTheme.Gold, TextAnchor.MiddleRight, 0.86f, y0, 0.95f, y1);
-            float v = PlayerPrefs.GetFloat(key, 0.7f);
-            pct.text = Mathf.RoundToInt(v * 100f) + "%";
-            UIFactory.MakeSlider(parent, label + "Slider", 0.22f, y0, 0.85f, y1, v, val =>
+            string key = "chip_tank";
+            switch (role)
             {
-                PlayerPrefs.SetFloat(key, val);
-                if (master) AudioListener.volume = val;
-                pct.text = Mathf.RoundToInt(val * 100f) + "%";
-            });
+                case Role.DPS: key = "chip_dps"; break;
+                case Role.Healer: key = "chip_healer"; break;
+                case Role.DoTApplier: key = "chip_dot"; break;
+                case Role.BufferDebuffer: key = "chip_buffer"; break;
+            }
+            var img = FitPic(parent, "RoleChip", "chips_badges/" + key, x0, y0, x1, y1);
+            Txt(img.transform, UnitData.RoleLabel(role).Replace("/", "/\n"), 14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.42f, 0.18f, 0.88f, 0.82f, true);
         }
 
-        void ConfirmRestart()
+        public static void RewardBadge(Transform parent, RewardKind type, float x0, float y0, float x1, float y1)
         {
-            if (DungeonState.CurrentPack == null) { CloseModal(); Toast("Belum ada Map yang dipilih."); return; }
-            ShowModal("Restart Map?", "Progress di Map ini kembali ke node pertama (Act 1).",
-                      new[] { "Cancel", "Restart" }, new Action[] { null, () => { battleView.Abort(); DungeonState.RestartMap(); ShowTab(Tab.Home); } });
+            var img = FitPic(parent, "Badge", "chips_badges/badge_" + type.ToString().ToLowerInvariant(), x0, y0, x1, y1);
+            Txt(img.transform, type.ToString(), 13, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.42f, 0.18f, 0.92f, 0.82f, true);
         }
 
-        void ConfirmReset()
+        // Ribbon bernama (teks asli di tengah).
+        public static Image Ribbon(Transform parent, string color, string text, int size,
+                                   float x0, float y0, float x1, float y1)
         {
-            ShowModal("Reset Dungeon?", "Seluruh run Dungeon Mode diulang dari awal (Men, Food, party, relic ikut ter-reset).",
-                      new[] { "Cancel", "Reset" }, new Action[] { null, () => { battleView.Abort(); DungeonState.ResetDungeon(); ShowTab(Tab.Home); } });
+            var img = FitPic(parent, "Ribbon", "ribbons/ribbon_" + color, x0, y0, x1, y1);
+            Txt(img.transform, text, size, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.17f, 0.30f, 0.83f, 0.78f, true);
+            return img;
         }
+    }
+}
 
-        void ExitToMenu()
+namespace Oddyseus.UI
+{
+    // Grid yang lebar selnya mengikuti lebar kontainer (kolom tetap, rasio tinggi/lebar tetap).
+    // Pasang pada Content di ScrollRect bersama ContentSizeFitter (vertical = PreferredSize).
+    [RequireComponent(typeof(GridLayoutGroup))]
+    public class ResponsiveGrid : MonoBehaviour
+    {
+        public int Cols = 5;
+        public float Spacing = 12f;
+        public float Aspect = 1.4f;     // tinggi / lebar
+        public float Pad = 8f;
+        GridLayoutGroup g;
+        RectTransform rt;
+
+        void OnEnable() { Apply(); }
+        void Start() { Apply(); }
+        void OnRectTransformDimensionsChange() { Apply(); }
+
+        public void Apply()
         {
-            // Belum ada save run ke disk: progres run hanya bertahan selama aplikasi terbuka (progres meta tersimpan di file).
-            SceneFader.LoadScene(GameScenes.Lobby);
+            if (g == null) g = GetComponent<GridLayoutGroup>();
+            if (rt == null) rt = transform as RectTransform;
+            if (g == null || rt == null) return;
+            float w = rt.rect.width;
+            if (w <= 1f) return;
+            float cell = (w - 2f * Pad - Spacing * (Cols - 1)) / Cols;
+            var size = new Vector2(cell, cell * Aspect);
+            if ((g.cellSize - size).sqrMagnitude < 0.01f && g.constraintCount == Cols) return;
+            g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            g.constraintCount = Cols;
+            g.spacing = new Vector2(Spacing, Spacing);
+            g.padding = new RectOffset((int)Pad, (int)Pad, (int)Pad, (int)Pad);
+            g.cellSize = size;
+            LayoutRebuilder.MarkLayoutForRebuild(rt);
         }
     }
 }

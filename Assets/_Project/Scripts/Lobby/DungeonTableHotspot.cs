@@ -5,6 +5,8 @@ using UnityEngine;
 /// RIGHT stop. The MAP on the table is the Dungeon Mode button. Put this on the map object.
 /// Hover: a circle draws itself around an island (LineRenderer on 'ring').
 /// Click: a knife is thrown into the circle (spinning), camera zooms and shakes, then Dungeon scene loads.
+/// PAINTED MODE: 'knife' and 'knifeStart' are optional. Without them the circle flashes white, the camera
+/// zooms and shakes, then the Dungeon scene loads.
 /// </summary>
 public class DungeonTableHotspot : Hotspot
 {
@@ -23,7 +25,7 @@ public class DungeonTableHotspot : Hotspot
     {
         ring.useWorldSpace = false;
         ring.loop = false;
-        knife.gameObject.SetActive(false);
+        if (knife != null) knife.gameObject.SetActive(false);
         SetProgress(0f);
     }
 
@@ -60,21 +62,28 @@ public class DungeonTableHotspot : Hotspot
         progress = 1f;
         SetProgress(1f);
 
-        Vector3 a = knifeStart.position, b = ring.transform.position;
-        float aim = Mathf.Atan2(b.y - a.y, b.x - a.x) * Mathf.Rad2Deg;
-        knife.position = a;
-        knife.gameObject.SetActive(true);
-
-        const float flight = 0.5f;
-        for (float t = 0; t < flight; t += Time.deltaTime)
+        if (knife != null && knifeStart != null)
         {
-            float k = t / flight;
-            knife.position = Vector3.Lerp(a, b, k);
-            knife.rotation = Quaternion.Euler(0, 0, aim + (1f - k) * 720f);   // spins, ends pointing at the island
-            yield return null;
+            Vector3 a = knifeStart.position, b = ring.transform.position;
+            float aim = Mathf.Atan2(b.y - a.y, b.x - a.x) * Mathf.Rad2Deg;
+            knife.position = a;
+            knife.gameObject.SetActive(true);
+
+            const float flight = 0.5f;
+            for (float t = 0; t < flight; t += Time.deltaTime)
+            {
+                float k = t / flight;
+                knife.position = Vector3.Lerp(a, b, k);
+                knife.rotation = Quaternion.Euler(0, 0, aim + (1f - k) * 720f);   // spins, ends pointing at the island
+                yield return null;
+            }
+            knife.position = b;
+            knife.rotation = Quaternion.Euler(0, 0, aim);
         }
-        knife.position = b;
-        knife.rotation = Quaternion.Euler(0, 0, aim);
+        else
+        {
+            yield return new WaitForSeconds(0.4f);   // painted map: no knife, the circle itself is the stab
+        }
 
         // impact
         ring.widthMultiplier *= 2.5f;

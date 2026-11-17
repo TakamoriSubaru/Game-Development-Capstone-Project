@@ -66,15 +66,15 @@ public static class UITheme
     public static readonly Vector2 HoverRibbonSize  = new Vector2(340f, 64f);
     public const float HoverPointerHeight = 20f;
     public static readonly Vector2 EdgeChevronSize  = new Vector2(280f, 84f);
-    public static readonly Vector2 CompassSize      = new Vector2(640f, 96f);
+    public static readonly Vector2 CompassSize      = new Vector2(720f, 96f);
     public const float MarkerSize = 48f;
     public static readonly Vector2 ConfirmPanelSize = new Vector2(760f, 360f);
     public static readonly Vector2 ConfirmButtonSize= new Vector2(280f, 72f);
     public static readonly Vector2 SliderTrackSize  = new Vector2(640f, 16f);
     public const float SliderHandleSize = 24f;
     public static readonly Vector2 SettingsPanelSize= new Vector2(900f, 640f);
-    public const float SettingsSliderWidth = 400f;
-    public const float SettingsKnobSize = 32f;
+    public const float SettingsSliderWidth = 440f;
+    public const float SettingsKnobSize = 44f;
 
     public const int FontTitle = 48;
     public const int FontSubtitle = 32;

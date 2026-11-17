@@ -1,73 +1,131 @@
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 using Oddyseus.Core;
 
 namespace Oddyseus.UI
 {
-    // Equipment dari boss tiap Pack (siluet sampai ditemukan) dan Blessing para dewa (GDD 6.2). Klik item untuk detail.
+    // Equipment dari boss tiap Pack (slot "?" sampai ditemukan) dan Blessing para dewa (GDD 6.2). Klik item untuk detail.
+    // Ikon equipment: taruh sprite di Resources/UI/equipment/<nama_snake_case>.png (mis. club_splinter.png);
+    // selama belum ada, medali berisi kode item (mis. "CS") dipakai sebagai gantinya.
     public class ArmoryView : HubScreen
     {
         bool blessings;
         int sel;
 
         protected override string Title { get { return "ARMORY"; } }
+        protected override bool RedStrip { get { return true; } }
 
         protected override void Populate(RectTransform body)
         {
-            Tab(body, "EQUIPMENT", !blessings, 0.03f, () => { blessings = false; sel = 0; Refresh(); });
-            Tab(body, "BLESSINGS", blessings, 0.18f, () => { blessings = true; sel = 0; Refresh(); });
+            var tabs = new TabBar(body, new[] { "EQUIPMENT", "BLESSINGS" }, 0.04f, 0.765f, 0.40f, 0.85f,
+                                  i => { blessings = i == 1; sel = 0; Refresh(); });
+            tabs.Select(blessings ? 1 : 0, false);
 
             int count = blessings ? BlessingCatalog.All.Length : EquipmentCatalog.All.Length;
             int found = 0;
             if (!blessings)
                 for (int i = 0; i < count; i++) if (MetaProgress.IsPackCleared(EquipmentCatalog.All[i].PackId)) found++;
-            UIFactory.Label(body, blessings ? "Blessings: single-use, drain the target's Stamina." : "Found " + found + "/" + count,
-                            18, HubTheme.Gold, TextAnchor.MiddleRight, 0.40f, 0.90f, 0.97f, 0.98f);
+            ParchUI.Txt(body, blessings ? "Blessings: single-use, drain the target's Stamina." : "Found " + found + "/" + count,
+                        20, Parch.DarkBrown, TextAnchor.MiddleRight, 0.45f, 0.77f, 0.97f, 0.85f);
 
             if (sel >= count) sel = 0;
-            for (int i = 0; i < count; i++) DrawCell(body, i);
-            DrawDetail(body);
+            if (blessings) BlessingGrid(body); else EquipmentGrid(body);
+            Detail(body);
         }
 
-        static void Tab(RectTransform body, string label, bool active, float x0, System.Action onClick)
+        // ---------------- Equipment ----------------
+
+        void EquipmentGrid(RectTransform body)
         {
-            HubUI.Btn(body, label, label, null, active ? HubTheme.Gold : HubTheme.Panel,
-                      active ? HubTheme.Night : HubTheme.Marble, x0, 0.90f, x0 + 0.14f, 0.98f, onClick, 18);
+            ParchUI.Panel9(body, "GridFrame", 0.03f, 0.055f, 0.685f, 0.745f, 0.3f);
+            RectTransform grid;
+            ParchUI.VScroll(body, "Scroll", 0.04f, 0.07f, 0.675f, 0.73f, out grid);
+            grid.gameObject.AddComponent<GridLayoutGroup>();
+            var fit = grid.gameObject.AddComponent<ContentSizeFitter>();
+            fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var rg = grid.gameObject.AddComponent<ResponsiveGrid>();
+            rg.Cols = 5; rg.Spacing = 8f; rg.Aspect = 0.72f; rg.Pad = 6f;
+
+            for (int i = 0; i < EquipmentCatalog.All.Length; i++)
+            {
+                int idx = i;
+                var e = EquipmentCatalog.All[i];
+                bool known = MetaProgress.IsPackCleared(e.PackId);
+                string frame = !known ? "frames/slot_unknown" : (i == sel ? "frames/slot_selected" : "frames/slot_normal");
+                var img = ParchUI.Sliced(grid, "Slot" + (i + 1), frame, 0f, 0f, 1f, 1f, 0.35f);
+                ParchUI.TintButton(img, () => { sel = idx; Refresh(); });
+                if (known)
+                {
+                    Medallion(img.transform, e, 0.2f, 0.34f, 0.8f, 0.9f, 26);
+                    ParchUI.Txt(img.transform, e.Name, 14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.05f, 0.08f, 0.95f, 0.33f);
+                }
+                else
+                {
+                    var disc = ParchUI.FitPic(img.transform, "Disc", "icons/icon_ui_question", 0.25f, 0.2f, 0.75f, 0.8f);
+                    disc.color = new Color(1f, 1f, 1f, 0.55f);
+                }
+            }
         }
 
-        void DrawCell(RectTransform body, int i)
+        static string Slug(string name)
         {
-            int idx = i;
-            int col = i % 5, row = i / 5;
-            float x0 = 0.03f + col * 0.1225f, x1 = x0 + 0.11f;
-            float y1 = 0.86f - row * 0.1767f, y0 = y1 - 0.16f;
-
-            bool known = blessings || MetaProgress.IsPackCleared(EquipmentCatalog.All[i].PackId);
-            string name = blessings ? BlessingCatalog.All[i].God : (known ? EquipmentCatalog.All[i].Name : "???");
-
-            var img = UIFactory.Panel(body, "Cell" + i, known ? HubTheme.Panel : HubTheme.Deep, x0, y0, x1, y1, false);
-            HubTheme.Frame(img, i == sel ? HubTheme.Gold : HubTheme.Bronze);
-            var b = img.gameObject.AddComponent<Button>();
-            b.targetGraphic = img;
-            b.onClick.AddListener(() => { sel = idx; Refresh(); });
-            img.gameObject.AddComponent<ButtonFx>();
-
-            var g = UIFactory.Label(img.transform, known ? HubUI.Initials(name) : "?", 30, known ? HubTheme.Marble : HubTheme.Muted,
-                                    TextAnchor.MiddleCenter, 0.05f, 0.36f, 0.95f, 0.95f);
-            g.fontStyle = FontStyle.Bold;
-            UIFactory.Label(img.transform, name, 11, HubTheme.Muted, TextAnchor.MiddleCenter, 0.04f, 0.03f, 0.96f, 0.36f);
+            return Regex.Replace(name.ToLowerInvariant().Replace("'", ""), "[^a-z0-9]+", "_").Trim('_');
         }
 
-        void DrawDetail(RectTransform body)
+        // Ikon item kalau ada, kalau tidak medali bulat berisi kode (huruf pertama dari dua kata awal).
+        static void Medallion(Transform parent, EquipmentInfo e, float x0, float y0, float x1, float y1, int codeSize)
         {
-            var card = HubUI.Card(body, "Detail", HubTheme.Deep, 0.67f, 0.04f, 0.97f, 0.86f, HubTheme.Bronze);
-            var t = card.transform;
-            string title, sub, text, foot;
+            var sp = Resources.Load<Sprite>("UI/equipment/" + Slug(e.Name));
+            if (sp != null)
+            {
+                var irt = UIFactory.NewRect(parent, "Icon");
+                UIFactory.Stretch(irt, x0, y0, x1, y1);
+                var ic = irt.gameObject.AddComponent<Image>();
+                ic.sprite = sp;
+                ic.preserveAspect = true;
+                ic.raycastTarget = false;
+                return;
+            }
+            var box = ParchUI.FitRect(parent, "Medal", x0, y0, x1, y1, 1f);
+            var disc = box.gameObject.AddComponent<Image>();
+            disc.sprite = UIFactory.CircleSprite;
+            disc.color = new Color(0.93f, 0.80f, 0.52f, 1f);
+            disc.raycastTarget = false;
+            ParchUI.Txt(box, HubUI.Initials(e.Name), codeSize, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.1f, 0.1f, 0.9f, 0.9f, true);
+        }
+
+        // ---------------- Blessings ----------------
+
+        void BlessingGrid(RectTransform body)
+        {
+            const int cols = 5;
+            for (int i = 0; i < BlessingCatalog.All.Length; i++)
+            {
+                int idx = i;
+                int cx = i % cols, cy = i / cols;
+                float x0 = 0.03f + cx * 0.1325f, x1 = x0 + 0.125f;
+                float y1 = 0.745f - cy * 0.37f, y0 = y1 - 0.35f;
+                var god = BlessingCatalog.All[i];
+                var img = ParchUI.Sliced(body, "Bless" + i, i == sel ? "frames/slot_selected" : "frames/slot_normal", x0, y0, x1, y1, 0.4f);
+                ParchUI.TintButton(img, () => { sel = idx; Refresh(); });
+                ParchUI.FitPic(img.transform, "Emblem", "blessings/blessing_" + god.God.ToLowerInvariant() + "_round", 0.12f, 0.27f, 0.88f, 0.92f);
+                ParchUI.Txt(img.transform, god.God, 18, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.04f, 0.06f, 0.96f, 0.27f, true);
+            }
+        }
+
+        // ---------------- Detail ----------------
+
+        void Detail(RectTransform body)
+        {
+            var t = ParchUI.Panel9(body, "Detail", 0.70f, 0.055f, 0.975f, 0.745f, 0.45f).rectTransform;
+            string sub, text, foot;
 
             if (blessings)
             {
                 var bl = BlessingCatalog.All[sel];
-                title = "Blessing of " + bl.God;
+                ParchUI.FitPic(t, "Emblem", "blessings/blessing_" + bl.God.ToLowerInvariant() + "_round", 0.07f, 0.74f, 0.30f, 0.93f);
+                ParchUI.Txt(t, "Blessing of " + bl.God, 26, Parch.DarkBrown, TextAnchor.MiddleLeft, 0.33f, 0.76f, 0.95f, 0.92f, true);
                 sub = "Target: " + bl.Target;
                 text = bl.Effect;
                 foot = "Price: " + bl.Gold + " Gold.\nSingle-use. Gives a massive buff, then drains the target's Stamina.";
@@ -79,25 +137,27 @@ namespace Oddyseus.UI
                 bool known = MetaProgress.IsPackCleared(e.PackId);
                 if (known)
                 {
-                    title = e.Name;
+                    Medallion(t, e, 0.07f, 0.74f, 0.30f, 0.93f, 24);
+                    ParchUI.Txt(t, HubUI.Initials(e.Name), 30, Parch.DarkBrown, TextAnchor.LowerLeft, 0.33f, 0.83f, 0.93f, 0.95f, true);
+                    ParchUI.Txt(t, e.Name, 22, Parch.DarkBrown, TextAnchor.UpperLeft, 0.33f, 0.72f, 0.93f, 0.83f, true);
                     sub = p != null ? "From " + p.Name + " (Floor " + p.Floor + ")" : "";
-                    text = e.Effect;
+                    text = e.Effect;                       // baris stat, mis. "+Atk, -Speed."
                     foot = p != null ? "Dropped by " + p.Boss + "." : "";
                 }
                 else
                 {
-                    title = "???";
+                    ParchUI.FitPic(t, "Unknown", "icons/icon_ui_question", 0.07f, 0.74f, 0.30f, 0.93f);
+                    ParchUI.Txt(t, "???", 30, Parch.Muted, TextAnchor.MiddleLeft, 0.33f, 0.76f, 0.93f, 0.93f, true);
                     sub = p != null ? "Floor " + p.Floor + " Pack" : "";
                     text = "Not found yet. Defeat a Pack's boss to claim its equipment.";
                     foot = "";
                 }
             }
 
-            UIFactory.Label(t, title, 26, HubTheme.Marble, TextAnchor.MiddleLeft, 0.06f, 0.82f, 0.94f, 0.96f);
-            UIFactory.Label(t, sub, 15, HubTheme.Gold, TextAnchor.MiddleLeft, 0.06f, 0.72f, 0.94f, 0.82f);
-            HubUI.Flat(t, "Divider", HubTheme.Bronze, 0.06f, 0.705f, 0.94f, 0.712f);
-            UIFactory.Label(t, text, 18, HubTheme.Marble, TextAnchor.UpperLeft, 0.06f, 0.32f, 0.94f, 0.69f);
-            UIFactory.Label(t, foot, 14, HubTheme.Muted, TextAnchor.UpperLeft, 0.06f, 0.04f, 0.94f, 0.30f);
+            ParchUI.Txt(t, sub, 20, Parch.DarkBrown, TextAnchor.MiddleLeft, 0.08f, 0.60f, 0.92f, 0.70f);
+            ParchUI.Pic(t, "Rule", "ornaments/divider_diamond", 0.08f, 0.57f, 0.92f, 0.60f, false);
+            ParchUI.Txt(t, text, 24, Parch.DarkBrown, TextAnchor.UpperLeft, 0.08f, 0.30f, 0.92f, 0.56f);
+            ParchUI.Txt(t, foot, 17, Parch.DarkBrown, TextAnchor.LowerLeft, 0.08f, 0.07f, 0.92f, 0.29f);
         }
     }
 }

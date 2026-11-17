@@ -6,6 +6,8 @@ using UnityEngine;
 /// Locked (GameState.StoryUnlocked = false): padlock shown, window shakes on click.
 /// Unlocked: bird on the sill hops on hover; on click it flies out into the window and shrinks into the
 /// distance, the camera zooms in and follows it, then the Story scene loads.
+/// PAINTED MODE: when 'bird' is empty (the window is only painted into the background) the camera shakes and
+/// Polites explains the window is boarded up (locked), or the camera zooms into the window and the Story loads (unlocked).
 /// </summary>
 public class StoryWindowHotspot : Hotspot
 {
@@ -15,20 +17,30 @@ public class StoryWindowHotspot : Hotspot
 
     public override string Label => GameState.StoryUnlocked ? "Story Mode" : "Story Mode  [Locked - next update]";
 
+    [TextArea] public string[] lockedLines =
+    {
+        "The window is boarded up. Story Mode is not ready yet.",
+        "Somebody nailed those planks on well. Next update, maybe."
+    };
+
     Vector3 birdHome, windowHome, birdScale;
     bool busy;
+    int lockedIndex;
 
     void Awake()
     {
-        birdHome = bird.localPosition;
-        birdScale = bird.localScale;
+        if (bird != null)
+        {
+            birdHome = bird.localPosition;
+            birdScale = bird.localScale;
+        }
         windowHome = transform.localPosition;
         if (lockIcon != null) lockIcon.SetActive(!GameState.StoryUnlocked);
     }
 
     void Update()
     {
-        if (busy || !GameState.StoryUnlocked) return;
+        if (busy || !GameState.StoryUnlocked || bird == null) return;
         float speed = IsHovered ? 12f : 1.5f;
         float amp = IsHovered ? 0.25f : 0.02f;
         bird.localPosition = birdHome + Vector3.up * Mathf.Abs(Mathf.Sin(Time.time * speed)) * amp;
@@ -42,11 +54,25 @@ public class StoryWindowHotspot : Hotspot
         if (busy) return;
         busy = true;
         if (!GameState.StoryUnlocked) StartCoroutine(Shake());
-        else StartCoroutine(FlyAway());
+        else if (bird != null) StartCoroutine(FlyAway());
+        else StartCoroutine(ZoomIn());
     }
 
     IEnumerator Shake()
     {
+        if (bird == null)
+        {
+            // painted window: shake the camera and let Polites explain
+            if (rig != null) rig.Shake(0.10f, 0.30f);
+            LobbyUI ui = LobbyUI.Instance;
+            if (ui != null && lockedLines != null && lockedLines.Length > 0)
+                ui.ShowSpeech("Polites", lockedLines[lockedIndex++ % lockedLines.Length]);
+            yield return new WaitForSeconds(0.35f);
+            busy = false;
+            yield return new WaitForSeconds(3f);
+            if (ui != null && ui.IsSpeechOpen && !ui.IsSpeechTyping) ui.HideSpeech();
+            yield break;
+        }
         for (float t = 0; t < 0.35f; t += Time.deltaTime)
         {
             transform.localPosition = windowHome + Vector3.right * Mathf.Sin(t * 70f) * 0.12f;
@@ -54,6 +80,15 @@ public class StoryWindowHotspot : Hotspot
         }
         transform.localPosition = windowHome;
         busy = false;
+    }
+
+    // Painted window, unlocked: zoom into the window, then load the Story.
+    IEnumerator ZoomIn()
+    {
+        GameState.LastLobbyStop = rig.Index;
+        rig.Focus(transform, 2.6f);
+        yield return new WaitForSeconds(0.8f);
+        SceneFader.LoadScene(GameScenes.Story, 0.6f);
     }
 
     IEnumerator FlyAway()

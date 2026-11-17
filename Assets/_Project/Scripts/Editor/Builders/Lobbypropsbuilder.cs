@@ -13,8 +13,7 @@ using UnityEngine.SceneManagement;
 ///     old glow art (it was drawn for the previous background).
 ///  4. UseWheelSprite = true puts prop_wheel on the wheel so it spins before Settings opens. Only turn it on
 ///     when the painted wheel has been removed from lobby_main.png, otherwise you see two wheels.
-/// Stop 1 (the lobby) uses positions measured on the new painting. Stops 0, 2 and 3 are still guesses until
-/// their art exists. Positions are background pixels on a 1672x941 image (u right, v down).
+/// All four stops use positions measured on the painted backgrounds in Art/Lobby. Positions are background pixels on a 1672x941 image (u right, v down).
 /// Running the menu again replaces the PROPS group (positions you moved by hand are lost).
 /// </summary>
 public static class LobbyPropsBuilder
@@ -39,6 +38,7 @@ public static class LobbyPropsBuilder
         public float idleAmount, idleSpeed = 1.6f;
         public int order = 5;
         public bool topPivot;                    // swing from the top edge (hanging lantern)
+        public string life;                      // "fire", "breathe", "rock" or "swing": adds the matching animator script
     }
 
     static Prop P(int stop, string name, string label, float u, float v, float w, float h, params string[] lines)
@@ -56,53 +56,55 @@ public static class LobbyPropsBuilder
 
     static Prop TopPivot(this Prop p) { p.topPivot = true; return p; }
 
+    static Prop Life(this Prop p, string kind) { p.life = kind; return p; }
+
     static Prop[] Props()
     {
         return new[]
         {
             // ---- stop 1: lobby (measured on the new painting)
-            P(1, "Fireplace", "Fireplace", 1275, 425, 440, 320,
+            P(1, "Fireplace", "Fireplace", 1290, 425, 440, 320,
                 "The embers glow. I could sit here until morning.",
                 "Keep the fire fed and the crew keeps its spirits.",
                 "A hearth like this makes Ithaca feel a little closer.")
-                .WithSprite("prop_fire", 1268, 468, 200, 200, PropHotspot.Reaction.Pulse, 0.06f, 5f),
-            P(1, "Sleeping Dog", "Sleeping Dog", 1290, 650, 250, 130,
+                .WithSprite("prop_fire", 1295, 470, 190, 190, PropHotspot.Reaction.None).Life("fire"),
+            P(1, "Sleeping Dog", "Sleeping Dog", 1285, 618, 250, 130,
                 "He has slept since the day we docked. Lucky dog.",
                 "Best not to wake him. He snores like a storm.",
                 "His paws twitch. Chasing gulls, I would say.")
-                .WithSprite("prop_dog", 1290, 650, 240, 126, PropHotspot.Reaction.Pulse, 0.02f, 1.4f),
+                .WithSprite("prop_dog_fit", 1285, 618, 235, 122, PropHotspot.Reaction.None).Life("breathe"),
             P(1, "Bookshelf", "Bookshelf", 402, 320, 330, 470,
                 "Old sailing logs, mostly. Some of them are even true.",
                 "Charts of every island we have yet to cross.",
                 "Somebody keeps a tiny ship on the shelf. I wonder who."),
-            P(1, "Toy Horse", "Toy Horse", 370, 605, 110, 105,
+            P(1, "Toy Horse", "Toy Horse", 400, 640, 135, 130,
                 "A little wooden horse. Someone's idea of a joke, I suspect.",
                 "Never trust a horse that size. I speak from experience.")
-                .WithSprite("prop_horse", 370, 605, 100, 100, PropHotspot.Reaction.Wiggle),
+                .WithSprite("prop_horse_fit", 400, 640, 120, 120, PropHotspot.Reaction.None).Life("rock"),
             P(1, "Ceiling Lantern", "Lantern", 792, 105, 80, 205,
                 "The oil runs low. We should refill it before nightfall.")
-                .WithSprite("prop_lantern", 792, 103, 74, 205, PropHotspot.Reaction.Wiggle).TopPivot(),
+                .WithSprite("prop_lantern_fit", 792, 103, 74, 205, PropHotspot.Reaction.None).TopPivot().Life("swing"),
 
-            // ---- stop 0: story window (guesses until the art exists)
-            P(0, "Ladder", "Ladder", 300, 500, 160, 480,
-                "The scaffolding creaks, but the carpenter swears it will hold."),
-            P(0, "Carpenter Tools", "Carpenter's Tools", 1350, 780, 200, 120,
+            // ---- stop 0: story window (measured on lobby_story_placeholder.png)
+            P(0, "Hanging Sign", "Hanging Sign", 1258, 246, 195, 135,
+                "A blank sign. Somebody meant to paint a name on it.",
+                "Maybe one day it will carry the name of our ship."),
+            P(0, "Carpenter Tools", "Carpenter's Tools", 1480, 500, 380, 110,
                 "Hammer, saw and nails. The ship will not mend itself."),
+            P(0, "Dust Sheet", "Dust Sheet", 130, 520, 260, 330,
+                "Something sleeps under that sheet. I have learned not to ask."),
 
-            // ---- stop 2: dungeon table (guesses)
-            P(2, "Candle", "Candle", 1250, 380, 80, 140,
-                "One candle keeps the whole table awake.",
+            // ---- stop 2: dungeon table (measured on lobby_dungeon_placeholder.png)
+            P(2, "Candelabra", "Candelabra", 1505, 150, 200, 270,
+                "Three candles keep the whole table awake.",
                 "Wax drips across old routes. Every voyage leaves a mark."),
-            P(2, "Coin Chest", "Coin Chest", 380, 700, 220, 170,
-                "Our coin chest. Lighter than I would like.",
-                "Gold buys food and favors. Spend it wisely."),
 
-            // ---- stop 3: exit door (guesses)
-            P(3, "Oars", "Oars", 330, 480, 120, 520,
+            // ---- stop 3: exit door (measured on lobby_exit_placeholder.png)
+            P(3, "Oars", "Oars", 297, 376, 190, 531,
                 "Oars enough for the whole crew, if every hand shows up."),
-            P(3, "Coats", "Coats", 1330, 360, 200, 300,
+            P(3, "Coats", "Coats", 1430, 297, 260, 280,
                 "Cloaks for the cold crossing. Mine is the damp one."),
-            P(3, "Supply Barrels", "Supply Barrels", 1350, 720, 200, 220,
+            P(3, "Supply Barrels", "Supply Barrels", 1511, 532, 320, 294,
                 "Salted fish and fresh water. Always count the barrels.")
         };
     }
@@ -171,10 +173,14 @@ public static class LobbyPropsBuilder
                         spr.transform.SetParent(pivot.transform, true);
                         target = pivot.transform;
                     }
-                    hs.reactTarget = target;
-                    hs.reaction = p.reaction;
-                    hs.idleAmount = p.idleAmount;
-                    hs.idleSpeed = p.idleSpeed;
+                    if (!string.IsNullOrEmpty(p.life)) AttachLife(p.life, spr, target);
+                    else
+                    {
+                        hs.reactTarget = target;
+                        hs.reaction = p.reaction;
+                        hs.idleAmount = p.idleAmount;
+                        hs.idleSpeed = p.idleSpeed;
+                    }
                 }
             }
         }
@@ -185,6 +191,26 @@ public static class LobbyPropsBuilder
         Selection.activeGameObject = root;
         Debug.Log("Oddyseus: added " + props.Length + " lobby interactables (" + spriteCount + " with their own sprite), aligned "
                   + moved + " existing objects. Save the scene (Ctrl+S) and press Play.");
+    }
+
+    // Adds the animator script that makes a prop move (fire, dog, horse, lantern).
+    static void AttachLife(string kind, GameObject sprite, Transform target)
+    {
+        switch (kind)
+        {
+            case "fire":
+                sprite.AddComponent<FireAnimator>();
+                break;
+            case "breathe":
+                sprite.AddComponent<PropLife>().kind = PropLifeKind.Breathe;
+                break;
+            case "rock":
+                sprite.AddComponent<PropLife>().kind = PropLifeKind.Rock;
+                break;
+            case "swing":
+                target.gameObject.AddComponent<PropLife>().kind = PropLifeKind.Swing;
+                break;
+        }
     }
 
     // Moves Polites, the wheel and the barrel onto the new painting and turns off the old glow art.

@@ -230,28 +230,36 @@ public static class UIKit
     // ------------------------------------------------------------------
     public static ThemedSlider CreateSlider(Transform parent)
     {
+        // Painted art: pa_slider_track (42 px tall) + pa_slider_fill (14 px tall) + pa_knob. Falls back to the old pill look.
+        bool painted = UIArt.IsAuthored("pa_slider_track") && UIArt.IsAuthored("pa_slider_fill");
+        float trackH = painted ? ThemedSlider.PaintedTrackHeight : UITheme.SliderTrackSize.y;
+        float fillH = painted ? ThemedSlider.PaintedFillHeight : UITheme.SliderTrackSize.y;
+        float fillInset = painted ? ThemedSlider.PaintedFillInset : 0f;
+
         RectTransform rt = NewRect("Themed Slider", parent);
         rt.sizeDelta = new Vector2(UITheme.SliderTrackSize.x, 40f);
 
         Image hit = NewImage("Hit Area", rt, null, Image.Type.Simple, new Color(0f, 0f, 0f, 0f), true);
         Stretch(hit.rectTransform);
 
-        Image track = NewImage("Track (replace sprite)", rt, "pill", Image.Type.Sliced, UITheme.ParchTrack, false);
+        Image track = NewImage("Track (replace sprite)", rt, painted ? "pa_slider_track" : "pill", Image.Type.Sliced,
+                               painted ? Color.white : UITheme.ParchTrack, false);
         RectTransform tr = track.rectTransform;
         tr.anchorMin = new Vector2(0f, 0.5f);
         tr.anchorMax = new Vector2(1f, 0.5f);
         tr.pivot = Center;
-        tr.offsetMin = new Vector2(0f, -UITheme.SliderTrackSize.y * 0.5f);
-        tr.offsetMax = new Vector2(0f, UITheme.SliderTrackSize.y * 0.5f);
+        tr.offsetMin = new Vector2(0f, -trackH * 0.5f);
+        tr.offsetMax = new Vector2(0f, trackH * 0.5f);
 
         RectTransform fillArea = NewRect("Fill Area", rt);
         fillArea.anchorMin = new Vector2(0f, 0.5f);
         fillArea.anchorMax = new Vector2(1f, 0.5f);
         fillArea.pivot = Center;
-        fillArea.offsetMin = new Vector2(0f, -UITheme.SliderTrackSize.y * 0.5f);
-        fillArea.offsetMax = new Vector2(0f, UITheme.SliderTrackSize.y * 0.5f);
+        fillArea.offsetMin = new Vector2(fillInset, -fillH * 0.5f);
+        fillArea.offsetMax = new Vector2(-fillInset, fillH * 0.5f);
 
-        Image fill = NewImage("Fill (replace sprite)", fillArea, "pill", Image.Type.Sliced, UITheme.Terracotta, false);
+        Image fill = NewImage("Fill (replace sprite)", fillArea, painted ? "pa_slider_fill" : "pill", Image.Type.Sliced,
+                              painted ? Color.white : UITheme.Terracotta, false);
         fill.rectTransform.anchorMin = Vector2.zero;
         fill.rectTransform.anchorMax = Vector2.one;
         fill.rectTransform.offsetMin = Vector2.zero;
@@ -263,6 +271,7 @@ public static class UIKit
         handleArea.offsetMax = new Vector2(-UITheme.SliderHandleSize * 0.5f, 0f);
 
         Image knob = NewImage("Knob (replace sprite)", handleArea, "pa_knob", Image.Type.Simple, Color.white, true);
+        knob.preserveAspect = true;
         Place(knob.rectTransform, new Vector2(0f, 0.5f), Center, Vector2.zero,
               new Vector2(UITheme.SliderHandleSize, UITheme.SliderHandleSize));
 
@@ -283,6 +292,8 @@ public static class UIKit
         ThemedSlider ts = rt.gameObject.AddComponent<ThemedSlider>();
         ts.slider = s;
         ts.track = tr;
+        ts.fillArea = fillArea;
+        ts.paintedArt = painted;
         ts.handleArea = handleArea;
         ts.knob = knob.rectTransform;
         ts.Init();
@@ -547,8 +558,9 @@ public static class UIKit
         Image dia = NewImage("Divider Diamond (replace sprite)", panel, "diamond", Image.Type.Simple, Color.white, false);
         Place(dia.rectTransform, Center, Center, new Vector2(0f, -125f), new Vector2(20f, 20f));
 
-        ThemedButton back = CreateButton(panel, "BACK", ThemedButtonStyle.Primary, UITheme.ConfirmButtonSize);
-        Place(RectOf(back), Center, Center, new Vector2(0f, -215f), UITheme.ConfirmButtonSize);
+        Vector2 backSize = new Vector2(252f, 84f);   // ~3:1 like the painted button, so it is not stretched
+        ThemedButton back = CreateButton(panel, "BACK", ThemedButtonStyle.Primary, backSize);
+        Place(RectOf(back), Center, Center, new Vector2(0f, -215f), backSize);
 
         SettingsPanel sp = root.gameObject.AddComponent<SettingsPanel>();
         sp.musicSlider = music;

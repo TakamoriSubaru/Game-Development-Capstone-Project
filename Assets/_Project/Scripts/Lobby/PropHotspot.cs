@@ -41,6 +41,9 @@ public class PropHotspot : Hotspot
     public override string Label => string.IsNullOrEmpty(label) ? gameObject.name : label;
     public override bool ShowMarker => showMarker;
 
+    /// <summary>Raised on every click. Animators (FireAnimator, PropLife) listen to it for their click reaction.</summary>
+    public event System.Action Clicked;
+
     static PropHotspot speakingOwner;
     static Sprite softSprite;
     static Material glowMat;
@@ -199,6 +202,7 @@ public class PropHotspot : Hotspot
     {
         flash = 1f;
         react = 1f;
+        if (Clicked != null) Clicked();
         if (sfx != null && AudioManager.Instance != null) AudioManager.Instance.PlaySfx(sfx, sfxVolume);
 
         LobbyUI ui = LobbyUI.Instance;

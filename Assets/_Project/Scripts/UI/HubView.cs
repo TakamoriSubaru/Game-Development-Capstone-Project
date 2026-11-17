@@ -5,121 +5,74 @@ using Oddyseus.Core;
 
 namespace Oddyseus.UI
 {
-    // Memutar sebuah RectTransform pelan-pelan (dekorasi kompas di Hub).
-    public class HubSpin : MonoBehaviour
-    {
-        public float Speed = 6f;
-        void Update() { transform.Rotate(0f, 0f, Speed * Time.unscaledDeltaTime); }
-    }
-
     // Layar pembuka Dungeon Mode, tampil sebelum Select Map. Dibangun penuh lewat kode.
+    // Logika (ENTER/CONTINUE, NEW RUN, status, kru) sama seperti sebelumnya; hanya tampilannya yang baru.
     public class HubView : View
     {
-        Text statusText, resText;
+        Text statusText, menVal, foodVal, goldVal;
         readonly Image[] slotImgs = new Image[RunState.PartySize];
-        readonly Text[] slotTexts = new Text[RunState.PartySize];
-        Button enterBtn;
-        GameObject newRunBtn;
+        Button enterBtn, newRunBtn;
 
         protected override void Build()
         {
-            HubUI.Flat(Root, "Bg", HubTheme.Night, 0f, 0f, 1f, 1f, true);
-            BuildCompass();
+            ParchUI.Background(Root, true, true, true, false);
+            ParchUI.Solid(Root, "Block", new Color(0f, 0f, 0f, 0f), 0f, 0f, 1f, 1f).raycastTarget = true;
+            var safe = ParchUI.SafeArea(Root);
 
-            HubUI.Flat(Root, "TopBand", HubTheme.Deep, 0f, 0.92f, 1f, 1f);
-            HubUI.Flat(Root, "TopLine", HubTheme.Bronze, 0f, 0.916f, 1f, 0.92f);
-            HubUI.Flat(Root, "BottomBand", HubTheme.Deep, 0f, 0f, 1f, 0.06f);
-            HubUI.Flat(Root, "BottomLine", HubTheme.Bronze, 0f, 0.06f, 1f, 0.064f);
+            ParchUI.TitleBar(safe, "DUNGEON MODE", () => SceneFader.LoadScene(GameScenes.Lobby), false);
 
-            UIFactory.Label(Root, "DUNGEON MODE", 28, HubTheme.Marble, TextAnchor.MiddleCenter, 0.35f, 0.93f, 0.65f, 0.99f);
-            HubUI.Btn(Root, "Back", "< BACK", null, HubTheme.Panel, HubTheme.Marble,
-                      0.015f, 0.93f, 0.10f, 0.99f, () => SceneFader.LoadScene(GameScenes.Lobby), 20);
+            // --- kompas: teks judul asli di cakram kosong ---
+            var comp = ParchUI.FitPic(safe, "Compass", "hub/compass_medallion", 0.335f, 0.25f, 0.665f, 0.86f);
+            ParchUI.Txt(comp.transform, "ODDYSEUS", 40, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.33f, 0.50f, 0.67f, 0.60f, true);
+            ParchUI.Pic(comp.transform, "Rule", "ornaments/divider_diamond", 0.37f, 0.485f, 0.63f, 0.505f, false);
+            ParchUI.Txt(comp.transform, "JOURNEY'S END", 18, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.34f, 0.41f, 0.66f, 0.485f, true);
+            ParchUI.Txt(safe, "Chart your own course home.", 20, Parch.Muted, TextAnchor.MiddleCenter, 0.30f, 0.17f, 0.70f, 0.24f);
 
-            UIFactory.Label(Root, "Chart your own course home.", 20, HubTheme.Muted, TextAnchor.MiddleCenter,
-                            0.30f, 0.10f, 0.70f, 0.17f);
+            // --- menu kiri ---
+            string[] icons = { "icons/icon_menu_legends", "icons/icon_menu_packs", "icons/icon_menu_armory", "icons/icon_menu_achievements" };
+            string[] titles = { "LEGENDS", "PACK COMPENDIUM", "ARMORY", "ACHIEVEMENTS" };
+            string[] subs = { "Your roster", "Packs, bosses, equipment", "Equipment and artifacts", "Unlock characters and costumes" };
+            Action[] go = { () => Host.OpenLegends(), () => Host.OpenCompendium(), () => Host.OpenArmory(), () => Host.OpenAchievements() };
+            for (int i = 0; i < 4; i++)
+            {
+                float y1 = 0.845f - i * 0.16f;
+                ParchUI.MenuButton(safe, "Menu" + i, icons[i], titles[i], subs[i], 0.03f, y1 - 0.14f, 0.335f, y1, go[i]);
+            }
 
-            // Menu kiri.
-            HubUI.Btn(Root, "Legends", "LEGENDS", "Your roster", HubTheme.Panel, HubTheme.Marble,
-                      0.03f, 0.67f, 0.27f, 0.80f, () => Host.OpenLegends(), 26);
-            HubUI.Btn(Root, "Compendium", "PACK COMPENDIUM", "Packs, bosses, equipment", HubTheme.Panel, HubTheme.Marble,
-                      0.03f, 0.51f, 0.27f, 0.64f, () => Host.OpenCompendium(), 26);
-            HubUI.Btn(Root, "Armory", "ARMORY", "Equipment and artifacts", HubTheme.Panel, HubTheme.Marble,
-                      0.03f, 0.35f, 0.27f, 0.48f, () => Host.OpenArmory(), 26);
-            HubUI.Btn(Root, "Achievements", "ACHIEVEMENTS", "Unlock characters and costumes", HubTheme.Panel, HubTheme.Marble,
-                      0.03f, 0.19f, 0.27f, 0.32f, () => Host.OpenAchievements(), 26);
-
-            // Panel kanan.
-            var d = HubTheme.Deep;
-            var cardFill = new Color(d.r, d.g, d.b, 0.92f);
-            var status = HubUI.Card(Root, "StatusCard", cardFill, 0.73f, 0.68f, 0.97f, 0.86f, HubTheme.Bronze);
-            UIFactory.Label(status.transform, "EXPLORING", 16, HubTheme.Gold, TextAnchor.UpperLeft, 0.06f, 0.64f, 0.94f, 0.94f);
-            statusText = UIFactory.Label(status.transform, "", 24, HubTheme.Marble, TextAnchor.MiddleLeft, 0.06f, 0.06f, 0.94f, 0.64f);
-
-            var crew = HubUI.Card(Root, "CrewCard", cardFill, 0.73f, 0.36f, 0.97f, 0.65f, HubTheme.Bronze);
-            UIFactory.Label(crew.transform, "CREW", 16, HubTheme.Gold, TextAnchor.UpperLeft, 0.06f, 0.80f, 0.50f, 0.96f);
+            // --- panel run (kanan) ---
+            var panel = ParchUI.Panel9(safe, "RunPanel", 0.685f, 0.17f, 0.975f, 0.835f, 0.45f).rectTransform;
+            statusText = ParchUI.Txt(panel, "", 26, Parch.DarkBrown, TextAnchor.UpperLeft, 0.09f, 0.78f, 0.92f, 0.94f, true);
+            ParchUI.Pic(panel, "Rule", "ornaments/divider_diamond", 0.09f, 0.745f, 0.91f, 0.775f, false);
+            ParchUI.Txt(panel, "CREW", 20, Parch.DarkBrown, TextAnchor.MiddleLeft, 0.09f, 0.665f, 0.50f, 0.74f, true);
             for (int i = 0; i < slotImgs.Length; i++)
             {
-                float x0 = 0.06f + i * 0.225f, x1 = x0 + 0.20f;
-                slotImgs[i] = UIFactory.Panel(crew.transform, "Slot" + i, HubTheme.Deep, x0, 0.32f, x1, 0.76f, false);
-                HubTheme.Frame(slotImgs[i], HubTheme.Bronze);
-                slotTexts[i] = UIFactory.Label(slotImgs[i].transform, "-", 26, HubTheme.Marble, TextAnchor.MiddleCenter,
-                                               0.1f, 0.1f, 0.9f, 0.9f);
-                slotTexts[i].fontStyle = FontStyle.Bold;
+                float x0 = 0.08f + i * 0.2275f;
+                slotImgs[i] = ParchUI.FitPic(panel, "Slot" + i, "portraits/portrait_locked_round", x0, 0.47f, x0 + 0.205f, 0.655f);
             }
-            resText = UIFactory.Label(crew.transform, "", 18, HubTheme.Marble, TextAnchor.MiddleLeft, 0.06f, 0.04f, 0.94f, 0.28f);
 
-            enterBtn = HubUI.Btn(Root, "Enter", "ENTER", null, HubTheme.Gold, HubTheme.Night,
-                                 0.73f, 0.17f, 0.97f, 0.31f, () => Host.EnterFromHub(), 32);
-            var nr = HubUI.Btn(Root, "NewRun", "NEW RUN", null, HubTheme.Panel, HubTheme.Marble,
-                               0.73f, 0.08f, 0.97f, 0.15f, OnNewRun, 18);
-            newRunBtn = nr.gameObject;
-        }
-
-        // Kompas dekoratif di tengah: cincin, tick, dan jarum yang berputar pelan.
-        void BuildCompass()
-        {
-            var box = UIFactory.NewRect(Root, "Compass");
-            box.anchorMin = box.anchorMax = new Vector2(0.5f, 0.5f);
-            box.pivot = new Vector2(0.5f, 0.5f);
-            box.sizeDelta = new Vector2(460f, 460f);
-            box.anchoredPosition = new Vector2(0f, 10f);
-
-            var c = new Vector2(230f, 230f);
-            HubUI.Disc(box, "RingOuter", c, 450f, HubTheme.Bronze);
-            HubUI.Disc(box, "RingOuterIn", c, 444f, HubTheme.Night);
-            HubUI.Disc(box, "Halo", c, 400f, new Color(HubTheme.Teal.r, HubTheme.Teal.g, HubTheme.Teal.b, 0.10f));
-
-            var ticks = SpinLayer(box, "Ticks", 460f, 5f);
-            for (int i = 0; i < 24; i++)
+            string[] ric = { "icons/icon_res_men", "icons/icon_res_food", "icons/icon_res_gold" };
+            string[] rname = { "Men", "Food", "Gold" };
+            var vals = new Text[3];
+            for (int i = 0; i < 3; i++)
             {
-                float a = i * 15f * Mathf.Deg2Rad;
-                var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                bool major = i % 3 == 0;
-                UIFactory.Segment(ticks, c + dir * 192f, c + dir * (major ? 218f : 208f), major ? 4f : 2f, HubTheme.Gold);
+                float x0 = 0.08f + i * 0.31f;
+                ParchUI.FitPic(panel, "Res" + i, ric[i], x0, 0.355f, x0 + 0.115f, 0.45f);
+                vals[i] = ParchUI.Txt(panel, "", 24, Parch.DarkBrown, TextAnchor.LowerLeft, x0 + 0.12f, 0.395f, x0 + 0.29f, 0.45f, true);
+                ParchUI.Txt(panel, rname[i], 14, Parch.Muted, TextAnchor.UpperLeft, x0 + 0.12f, 0.35f, x0 + 0.29f, 0.395f);
             }
+            menVal = vals[0]; foodVal = vals[1]; goldVal = vals[2];
 
-            var needles = SpinLayer(box, "Needles", 460f, -8f);
-            for (int i = 0; i < 8; i++)
-            {
-                float a = i * 45f * Mathf.Deg2Rad;
-                var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                bool major = i % 2 == 0;
-                UIFactory.Segment(needles, c + dir * 126f, c + dir * (major ? 175f : 150f), major ? 6f : 3f, HubTheme.Bronze);
-            }
-
-            HubUI.Disc(box, "DiskRing", c, 262f, HubTheme.Gold);
-            HubUI.Disc(box, "Disk", c, 254f, HubTheme.Deep);
-
-            UIFactory.Label(box, "ODDYSEUS", 44, HubTheme.Marble, TextAnchor.MiddleCenter, 0.18f, 0.50f, 0.82f, 0.64f);
-            HubUI.Flat(box, "Divider", HubTheme.Bronze, 0.36f, 0.495f, 0.64f, 0.50f);
-            UIFactory.Label(box, "JOURNEY'S END", 20, HubTheme.Gold, TextAnchor.MiddleCenter, 0.22f, 0.40f, 0.78f, 0.485f);
+            enterBtn = ParchUI.Pill(panel, "Enter", "ENTER", "parchment", ParchUI.GoldTint, 0.08f, 0.18f, 0.92f, 0.32f,
+                                    () => Host.EnterFromHub(), 30, 0.6f);
+            newRunBtn = ParchUI.Pill(panel, "NewRun", "NEW RUN", "alt", 0.08f, 0.05f, 0.92f, 0.145f, OnNewRun, 20, 0.5f);
         }
 
         public override void Refresh()
         {
             bool progress = DungeonState.InMap || DungeonState.Floor > 1;
-            UIFactory.SetBtnText(enterBtn, progress ? "CONTINUE" : "ENTER");
-            newRunBtn.SetActive(progress);
+            // Tanpa progres tombol emas = ENTER (memulai run dari Select Map); dengan progres = CONTINUE.
+            enterBtn.GetComponent<UiBtn>().Label.text = progress ? "CONTINUE" : "ENTER";
+            newRunBtn.gameObject.SetActive(progress);
 
             if (DungeonState.InMap && DungeonState.CurrentPack != null)
                 statusText.text = "Floor " + DungeonState.Floor + "/" + DungeonState.Floors + " - "
@@ -134,19 +87,20 @@ namespace Oddyseus.UI
                 if (i < DungeonState.Party.Count && DungeonState.Party[i] < RunState.Roster.Count)
                 {
                     var cs = RunState.Roster[DungeonState.Party[i]];
-                    var col = Theme.Hex(cs.Data.PortraitHex);
-                    slotImgs[i].color = cs.Alive ? col : col * 0.4f;
-                    string n = string.IsNullOrEmpty(cs.Data.Name) ? "?" : cs.Data.Name.Substring(0, 1);
-                    slotTexts[i].text = cs.Alive ? n : "X";
+                    var sp = UISprites.Get("portraits/portrait_" + cs.Data.Id + "_round");
+                    slotImgs[i].sprite = sp != null ? sp : UISprites.Get("portraits/portrait_locked_round");
+                    slotImgs[i].color = cs.Alive ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.8f);
                 }
                 else
                 {
-                    slotImgs[i].color = HubTheme.Deep;
-                    slotTexts[i].text = "-";
+                    slotImgs[i].sprite = UISprites.Get("portraits/portrait_locked_round");
+                    slotImgs[i].color = new Color(1f, 1f, 1f, 0.55f);
                 }
             }
 
-            resText.text = "Men " + RunState.Men + "   Food " + RunState.Food + "   Gold " + RunState.Gold;
+            menVal.text = RunState.Men.ToString();
+            foodVal.text = RunState.Food.ToString();
+            goldVal.text = RunState.Gold.ToString();
         }
 
         void OnNewRun()
@@ -154,17 +108,6 @@ namespace Oddyseus.UI
             Host.ShowModal("Start a new run?", "Progress run yang sedang berjalan akan dihapus.",
                            new[] { "Cancel", "New Run" },
                            new Action[] { null, () => { DungeonState.ResetDungeon(); Refresh(); } });
-        }
-
-        static RectTransform SpinLayer(Transform parent, string name, float size, float speed)
-        {
-            var rt = UIFactory.NewRect(parent, name);
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(size, size);
-            rt.anchoredPosition = Vector2.zero;
-            rt.gameObject.AddComponent<HubSpin>().Speed = speed;
-            return rt;
         }
     }
 }
