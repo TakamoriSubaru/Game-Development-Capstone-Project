@@ -6,11 +6,14 @@ using UnityEngine;
 namespace Oddyseus.EditorTools
 {
     // Semua PNG di Assets/_Project/Resources/UI otomatis jadi Sprite (Single), transparan, tanpa mipmap, Bilinear.
-    // Frame 9-slice diberi border di sini (urutan Unity: kiri, bawah, kanan, atas; piksel gambar asli).
+    // Frame yang dipakai sebagai 9-slice diberi border di sini (urutan Unity: kiri, bawah, kanan, atas; satuan piksel gambar asli).
+    // Pusat frame itu rata (flat), dekorasi ada di sudut, jadi aman diregangkan.
+    // Setelah mengubah angka di sini: klik kanan folder Resources/UI > Reimport.
     public class UIAssetImporter : AssetPostprocessor
     {
         const string Root = "Assets/_Project/Resources/UI/";
 
+        // key = path relatif terhadap Root tanpa ekstensi. Nilai = (kiri, bawah, kanan, atas).
         static readonly Dictionary<string, Vector4> Borders = new Dictionary<string, Vector4>
         {
             { "frames/frame_panel_large", new Vector4(96, 96, 96, 96) },
@@ -55,7 +58,7 @@ namespace Oddyseus.EditorTools
 
             var s = new TextureImporterSettings();
             ti.ReadTextureSettings(s);
-            s.spriteMeshType = SpriteMeshType.FullRect;
+            s.spriteMeshType = SpriteMeshType.FullRect;   // wajib untuk sprite yang di-slice
             s.spriteAlignment = (int)SpriteAlignment.Center;
             ti.SetTextureSettings(s);
 

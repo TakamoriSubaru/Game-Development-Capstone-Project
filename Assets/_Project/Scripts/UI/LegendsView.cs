@@ -5,7 +5,7 @@ using Oddyseus.Core;
 
 namespace Oddyseus.UI
 {
-    // Semua karakter: yang dimiliki (GameData) dan karakter bonus yang terkunci sampai achievement tercapai.
+    // Semua karakter: yang dimiliki (dari GameData) dan karakter bonus yang terkunci sampai achievement tercapai.
     // Tab Legends / Costumes, kartu dengan portrait bulat, chip peran, stat, dan bar kostum.
     public class LegendsView : HubScreen
     {
@@ -30,7 +30,7 @@ namespace Oddyseus.UI
             var tabs = new TabBar(body, new[] { "LEGENDS", "COSTUMES" }, 0.045f, 0.77f, 0.34f, 0.85f, i => { tab = i; Refresh(); });
             tabs.Select(tab, false);
             ParchUI.Txt(body, "Unlocked through Campaign chapters and Achievements.", 17, Parch.Muted, TextAnchor.MiddleLeft, 0.36f, 0.77f, 0.66f, 0.85f);
-            ParchUI.Ribbon(body, "olive", "Legends " + owned + "/" + total, 20, 0.69f, 0.755f, 0.955f, 0.865f);
+            ParchUI.Ribbon(body, "olive", (tab == 0 ? "Legends " : "Legends ") + owned + "/" + total, 20, 0.69f, 0.755f, 0.955f, 0.865f);
 
             RectTransform grid;
             ParchUI.VScroll(body, "Scroll", 0.045f, 0.05f, 0.955f, 0.745f, out grid);
@@ -40,17 +40,12 @@ namespace Oddyseus.UI
             var rg = grid.gameObject.AddComponent<ResponsiveGrid>();
             rg.Cols = 5; rg.Spacing = 14f; rg.Aspect = 1.55f; rg.Pad = 6f;
 
-            for (int i = 0; i < roster.Count; i++)
-            {
-                if (tab == 0) OwnedCard(grid, roster[i]);
-                else CostumeCard(grid, roster[i].Name, true);
-            }
+            for (int i = 0; i < roster.Count; i++) { if (tab == 0) OwnedCard(grid, roster[i]); else CostumeCard(grid, roster[i].Id, roster[i].Name, true); }
             for (int i = 0; i < bonus.Length; i++)
             {
                 var a = AchievementCatalog.Find(bonus[i].AchievementId);
                 bool open = a != null && a.Unlocked;
-                if (tab == 0) BonusCard(grid, bonus[i], a, open);
-                else CostumeCard(grid, bonus[i].Name, open);
+                if (tab == 0) BonusCard(grid, bonus[i], a, open); else CostumeCard(grid, IdOf(bonus[i].Name), bonus[i].Name, open);
             }
         }
 
@@ -61,10 +56,12 @@ namespace Oddyseus.UI
             return ParchUI.Sliced(grid, "Card", "frames/frame_card_tall", 0f, 0f, 1f, 1f, 0.55f).rectTransform;
         }
 
+        static Sprite Round(string id) { return UISprites.Get("portraits/portrait_" + id + "_round"); }
+
         static void OwnedCard(RectTransform grid, UnitData d)
         {
             var card = NewCard(grid);
-            ParchUI.FitPic(card, "Portrait", "portraits/portrait_" + d.Id + "_round", 0.16f, 0.60f, 0.84f, 0.96f);
+            var pic = ParchUI.FitPic(card, "Portrait", "portraits/portrait_" + d.Id + "_round", 0.16f, 0.60f, 0.84f, 0.96f);
             ParchUI.Txt(card, d.Name, 19, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.06f, 0.525f, 0.94f, 0.60f, true);
             ParchUI.RoleChip(card, d.Role, 0.06f, 0.385f, 0.94f, 0.52f);
             Stat(card, "icons/icon_stat_hp", "HP", d.MaxHp.ToString(), 0.08f, 0.275f, 0.50f, 0.37f);
@@ -93,7 +90,7 @@ namespace Oddyseus.UI
             ParchUI.Txt(card, a != null ? a.Desc : "", 16, Parch.DarkBrown, TextAnchor.UpperCenter, 0.10f, 0.08f, 0.90f, 0.41f);
         }
 
-        static void CostumeCard(RectTransform grid, string name, bool open)
+        static void CostumeCard(RectTransform grid, string id, string name, bool open)
         {
             var card = NewCard(grid);
             var pic = ParchUI.FitPic(card, "Icon", "icons/icon_costume", 0.22f, 0.58f, 0.78f, 0.94f);

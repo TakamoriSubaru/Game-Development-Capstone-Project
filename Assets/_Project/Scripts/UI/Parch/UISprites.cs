@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace Oddyseus.UI
 {
-    // Pemuat sprite dan font tema. Aset ada di Assets/_Project/Resources/UI, dipanggil dengan path relatif
-    // tanpa ekstensi, mis. UISprites.Get("frames/frame_panel_large").
+    // Pemuat sprite dan font tema. Semua aset ada di Assets/_Project/Resources/UI, dipanggil dengan path relatif
+    // tanpa ekstensi, contoh: UISprites.Get("frames/frame_panel_large"). Hasilnya di-cache.
     public static class UISprites
     {
         static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
@@ -21,6 +21,7 @@ namespace Oddyseus.UI
             return s;
         }
 
+        // Judul: Cinzel (bold lewat FontStyle.Bold). Isi: EB Garamond. Keduanya OFL; lihat Resources/UI/Fonts.
         public static Font TitleFont
         {
             get { if (title == null) title = Resources.Load<Font>("UI/Fonts/Cinzel-Variable"); return title; }

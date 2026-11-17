@@ -1,0 +1,21 @@
+ODDYSEUS PARCHMENT UI PASS  (hub + Legends + Pack Compendium + Armory + Achievements)
+Not compiled or run by the author (no Unity available).
+
+STEP 0 - CLEAN UP FIRST (fixes "namespace already contains a definition for Parch / TabBar / ParchUI ...")
+  In Unity's Project window, search for:   ParchUI    and    UISprites    and    UIAssetImporter
+  Delete EVERY copy except the ones this zip creates:
+     Assets/_Project/Scripts/UI/Parch/ParchUI.cs
+     Assets/_Project/Scripts/UI/Parch/UISprites.cs
+     Assets/_Project/Scripts/Editor/UIAssetImporter.cs
+  Easiest: delete the whole folder Assets/_Project/Scripts/UI/Parch/ before unzipping.
+  Also delete any stray files you created by pasting code (e.g. "ParchUI 1.cs", "Parch.cs", "TabBar.cs").
+  Make sure there is exactly ONE DungeonController.cs, at Assets/_Project/Scripts/UI/DungeonController.cs.
+  (If you deleted it, this zip restores it. "DungeonController could not be found" = that file is missing or empty.)
+
+STEP 1 - ART: copy the 16 folders from oddyseus_ui_assets.zip into Assets/_Project/Resources/UI/
+  (backgrounds, hub, portraits, packs, scrolls, packs_scroll, relics, relic_frames, blessings, icons, frames,
+   buttons, ribbons, bars, chips_badges, ornaments). Do not touch Resources/UIKit.
+
+STEP 2 - UNZIP this archive into the project root (it overwrites files of the same name).
+
+STEP 3 - In Unity: right-click Assets/_Project/Resources/UI > Reimport (applies the 9-slice borders). Play the Dungeon scene.

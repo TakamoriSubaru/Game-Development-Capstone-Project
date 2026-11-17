@@ -79,12 +79,12 @@ namespace Oddyseus.UI
 
             // 3) teks: nama di ribbon, tipe, Boss, Equipment (semuanya teks asli)
             ParchUI.Ribbon(frame, seen ? (cleared ? "gold" : "terracotta") : "bluegrey", seen ? p.Name : "???", 17, 0.03f, 0.275f, 0.97f, 0.465f);
-            string god = seen && p.GodRealmChance > 0f ? "God Realm " + Mathf.RoundToInt(p.GodRealmChance * 100f) + "%" : "";
+            string god = seen && p.GodRealmChance > 0f ? "   God Realm " + Mathf.RoundToInt(p.GodRealmChance * 100f) + "%" : "";
             ParchUI.Txt(frame, seen ? NodeInfo.EnvName(p.Env) + " / " + p.Theme : "Undiscovered", 14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.20f, 0.225f, 0.80f, 0.285f);
             ParchUI.Txt(frame, "BOSS: " + (cleared ? p.Boss : "???"), 14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.20f, 0.165f, 0.80f, 0.225f, true);
             var eq = EquipmentCatalog.ForPack(p.Id);
             ParchUI.Txt(frame, "EQUIPMENT: " + (cleared && eq != null ? eq.Name : "???"), 13, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.20f, 0.105f, 0.80f, 0.165f, true);
-            ParchUI.Txt(frame, cleared ? god : "Defeat the boss to reveal.", 12,
+            ParchUI.Txt(frame, cleared ? (god.Trim().Length > 0 ? god.Trim() : "") : "Defeat the boss to reveal.", 12,
                         cleared ? Parch.Olive : Parch.Muted, TextAnchor.MiddleCenter, 0.20f, 0.05f, 0.80f, 0.105f);
         }
 

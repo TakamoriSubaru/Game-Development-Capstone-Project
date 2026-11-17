@@ -73,7 +73,7 @@ namespace Oddyseus.UI
             return Regex.Replace(name.ToLowerInvariant().Replace("'", ""), "[^a-z0-9]+", "_").Trim('_');
         }
 
-        // Ikon item kalau ada, kalau tidak medali bulat berisi kode (huruf pertama dari dua kata awal).
+        // Ikon item kalau ada, kalau tidak medali bulat berisi kode (dua huruf pertama dari dua kata awal).
         static void Medallion(Transform parent, EquipmentInfo e, float x0, float y0, float x1, float y1, int codeSize)
         {
             var sp = Resources.Load<Sprite>("UI/equipment/" + Slug(e.Name));
@@ -119,16 +119,17 @@ namespace Oddyseus.UI
         void Detail(RectTransform body)
         {
             var t = ParchUI.Panel9(body, "Detail", 0.70f, 0.055f, 0.975f, 0.745f, 0.45f).rectTransform;
-            string sub, text, foot;
+            string title, sub, text, foot;
 
             if (blessings)
             {
                 var bl = BlessingCatalog.All[sel];
                 ParchUI.FitPic(t, "Emblem", "blessings/blessing_" + bl.God.ToLowerInvariant() + "_round", 0.07f, 0.74f, 0.30f, 0.93f);
-                ParchUI.Txt(t, "Blessing of " + bl.God, 26, Parch.DarkBrown, TextAnchor.MiddleLeft, 0.33f, 0.76f, 0.95f, 0.92f, true);
+                title = "Blessing of " + bl.God;
                 sub = "Target: " + bl.Target;
                 text = bl.Effect;
                 foot = "Price: " + bl.Gold + " Gold.\nSingle-use. Gives a massive buff, then drains the target's Stamina.";
+                Header(t, title, 0.33f);
             }
             else
             {
@@ -158,6 +159,11 @@ namespace Oddyseus.UI
             ParchUI.Pic(t, "Rule", "ornaments/divider_diamond", 0.08f, 0.57f, 0.92f, 0.60f, false);
             ParchUI.Txt(t, text, 24, Parch.DarkBrown, TextAnchor.UpperLeft, 0.08f, 0.30f, 0.92f, 0.56f);
             ParchUI.Txt(t, foot, 17, Parch.DarkBrown, TextAnchor.LowerLeft, 0.08f, 0.07f, 0.92f, 0.29f);
+        }
+
+        static void Header(Transform t, string title, float x0)
+        {
+            ParchUI.Txt(t, title, 26, Parch.DarkBrown, TextAnchor.MiddleLeft, x0, 0.76f, 0.95f, 0.92f, true);
         }
     }
 }

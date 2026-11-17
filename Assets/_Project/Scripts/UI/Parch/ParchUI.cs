@@ -52,7 +52,8 @@ namespace Oddyseus.UI
         void OnDisable() { over = false; down = false; if (Img != null) { Img.sprite = Normal; Target.localScale = Vector3.one; } }
     }
 
-    // Deretan tab pakai sprite tab_selected / tab_unselected. Hover, pressed, disabled lewat ColorTint.
+    // Deretan tab (Legends/Costumes, Floor 1..4, ...) pakai sprite tab_selected / tab_unselected.
+    // Hover, pressed, dan disabled lewat ColorTint karena aset tab hanya punya dua sprite.
     public class TabBar
     {
         public readonly RectTransform Root;
@@ -105,10 +106,13 @@ namespace Oddyseus.UI
         }
     }
 
-    // Pembuat widget bergambar. Semua posisi = anchor 0..1 relatif terhadap induk (sama seperti UIFactory).
+    // Kumpulan pembuat widget bergambar. Semua posisi = anchor 0..1 relatif terhadap induk (sama seperti UIFactory).
     public static class ParchUI
     {
-        // Kotak 16:9 terbesar yang muat di layar; isi layar dibangun di dalamnya (latar tetap memenuhi layar).
+        // ---------- dasar ----------
+
+        // Kotak 16:9 terbesar yang muat di layar. Semua isi layar dibangun di dalamnya sehingga tata letak sama
+        // di 16:9 dan tidak pecah di rasio lain (latar tetap memenuhi layar).
         public static RectTransform SafeArea(Transform canvas)
         {
             var rt = UIFactory.NewRect(canvas, "SafeArea");
@@ -130,7 +134,8 @@ namespace Oddyseus.UI
             return img;
         }
 
-        // Gambar yang selalu pas di dalam kotak dengan rasio aslinya. Anak-anaknya memakai anchor relatif ke gambar.
+        // Gambar yang selalu pas di dalam kotak dengan rasio aslinya (rata tengah). Cocok untuk chip, ribbon, gulungan.
+        // Anak-anaknya memakai anchor relatif terhadap gambar itu sendiri, jadi teks tidak bergeser.
         public static Image FitPic(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1)
         {
             var box = UIFactory.NewRect(parent, name + "Box");
@@ -147,7 +152,8 @@ namespace Oddyseus.UI
             return img;
         }
 
-        // Kotak kosong dengan rasio tetap (lebar/tinggi), rata tengah di dalam area.
+        // Kotak kosong dengan rasio tetap (lebar/tinggi), rata tengah di dalam area. Dipakai kalau beberapa anak harus
+        // berbagi satu bidang gambar (mis. lukisan Pack di belakang gulungan).
         public static RectTransform FitRect(Transform parent, string name, float x0, float y0, float x1, float y1, float aspect)
         {
             var box = UIFactory.NewRect(parent, name + "Box");
@@ -160,6 +166,7 @@ namespace Oddyseus.UI
             return rt;
         }
 
+        // Baris "Label  nilai" (label redup, nilai gelap) dalam satu Text.
         public static Text Field(Transform parent, string label, string value, int size, float x0, float y0, float x1, float y1,
                                  TextAnchor align = TextAnchor.UpperLeft)
         {
@@ -167,7 +174,7 @@ namespace Oddyseus.UI
             return Txt(parent, "<color=#" + hex + ">" + label + "</color>  " + value, size, Parch.DarkBrown, align, x0, y0, x1, y1);
         }
 
-        // Frame 9-slice. borderScale < 1 mengecilkan dekorasi sudut.
+        // Frame 9-slice. borderScale < 1 mengecilkan dekorasi sudut (border asli dihitung di UIAssetImporter).
         public static Image Sliced(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1, float borderScale)
         {
             var rt = UIFactory.NewRect(parent, name);
@@ -215,6 +222,7 @@ namespace Oddyseus.UI
         // ---------- tombol ----------
 
         // Tombol pill: set = "parchment" | "terracotta" | "alt". Empat state (normal, hover, pressed, disabled) lewat SpriteSwap.
+        // tint dipakai untuk tombol emas (set parchment diwarnai emas).
         public static Button Pill(Transform parent, string name, string label, string set, Color tint,
                                   float x0, float y0, float x1, float y1, Action onClick, int fontSize = 22, float borderScale = 0.55f)
         {
@@ -257,7 +265,7 @@ namespace Oddyseus.UI
             m.Label.color = on ? Parch.DarkBrown : Parch.Disabled;
         }
 
-        // Tombol dari satu sprite (menu hub, kartu, slot). Hover/pressed/disabled lewat ColorTint.
+        // Tombol dari satu sprite (menu kiri hub, kartu, slot). Hover/pressed/disabled lewat ColorTint.
         public static Button TintButton(Image img, Action onClick)
         {
             img.raycastTarget = true;
@@ -290,7 +298,7 @@ namespace Oddyseus.UI
 
         // ---------- bar ----------
 
-        // Bar progres: track bergambar + isi emas yang dihitung di kode.
+        // Bar progres: track bergambar + isi emas yang dihitung di kode (aset "filled" sudah mengandung isi tetap).
         public static Image ProgressBar(Transform parent, float fraction, float x0, float y0, float x1, float y1, float borderScale = 0.4f)
         {
             var track = Sliced(parent, "Bar", "bars/progress_track_empty", x0, y0, x1, y1, borderScale);
@@ -349,7 +357,7 @@ namespace Oddyseus.UI
 
         // ---------- latar dan judul ----------
 
-        // parchment_base + vignette di atasnya. Memenuhi seluruh layar tanpa distorsi.
+        // parchment_base + vignette di atasnya (sesuai tata letak tiap layar). Memenuhi seluruh layar tanpa distorsi.
         public static RectTransform Background(Transform canvas, bool topRight, bool bottomLeft, bool bottomRight, bool leftEdge)
         {
             var bg = UIFactory.NewRect(canvas, "Background");
@@ -370,7 +378,8 @@ namespace Oddyseus.UI
             return bg;
         }
 
-        // Judul besar (Cinzel) diapit daun, tombol BACK di kiri, pita Greek-key di bawahnya.
+        // Bar judul sesuai mockup: judul besar (Cinzel) diapit daun, tombol BACK di kiri, lalu pita Greek-key di bawahnya.
+        // redStrip: pita terracotta (Armory, Achievements) atau cokelat (Hub, Compendium, Legends).
         public static void TitleBar(Transform parent, string title, Action onBack, bool redStrip = false)
         {
             Pic(parent, "KeyStrip", redStrip ? "ornaments/key_strip_terracotta" : "ornaments/key_strip_brown", 0f, 0.868f, 1f, 0.905f, false);
@@ -421,8 +430,8 @@ namespace Oddyseus.UI
 
 namespace Oddyseus.UI
 {
-    // Grid yang lebar selnya mengikuti lebar kontainer (kolom tetap, rasio tinggi/lebar tetap).
-    // Pasang pada Content di ScrollRect bersama ContentSizeFitter (vertical = PreferredSize).
+    // Grid yang lebar selnya mengikuti lebar kontainer (jumlah kolom tetap, rasio tinggi/lebar tetap).
+    // Pasang pada Content di dalam ScrollRect bersama ContentSizeFitter (vertical = PreferredSize).
     [RequireComponent(typeof(GridLayoutGroup))]
     public class ResponsiveGrid : MonoBehaviour
     {

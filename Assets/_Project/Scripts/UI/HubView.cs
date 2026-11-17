@@ -6,7 +6,8 @@ using Oddyseus.Core;
 namespace Oddyseus.UI
 {
     // Layar pembuka Dungeon Mode, tampil sebelum Select Map. Dibangun penuh lewat kode.
-    // Logika (ENTER/CONTINUE, NEW RUN, status, kru) sama seperti sebelumnya; hanya tampilannya yang baru.
+    // Tampilan: parchment + kompas bergambar, menu kiri, panel run kanan (sesuai mockup Parchment_Dungeon_Mode_Menu).
+    // Logika (ENTER/CONTINUE, NEW RUN, status, kru) sama seperti sebelumnya.
     public class HubView : View
     {
         Text statusText, menVal, foodVal, goldVal;
@@ -70,7 +71,7 @@ namespace Oddyseus.UI
         public override void Refresh()
         {
             bool progress = DungeonState.InMap || DungeonState.Floor > 1;
-            // Tanpa progres tombol emas = ENTER (memulai run dari Select Map); dengan progres = CONTINUE.
+            // Tanpa progres tombol emas tetap aktif sebagai ENTER (memulai run dari Select Map); dengan progres jadi CONTINUE.
             enterBtn.GetComponent<UiBtn>().Label.text = progress ? "CONTINUE" : "ENTER";
             newRunBtn.gameObject.SetActive(progress);
 
@@ -89,7 +90,7 @@ namespace Oddyseus.UI
                     var cs = RunState.Roster[DungeonState.Party[i]];
                     var sp = UISprites.Get("portraits/portrait_" + cs.Data.Id + "_round");
                     slotImgs[i].sprite = sp != null ? sp : UISprites.Get("portraits/portrait_locked_round");
-                    slotImgs[i].color = cs.Alive ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.8f);
+                    slotImgs[i].color = cs.Alive ? Color.white : new Color(0.45f, 0.45f, 0.45f, 0.8f);   // gugur = abu-abu
                 }
                 else
                 {
