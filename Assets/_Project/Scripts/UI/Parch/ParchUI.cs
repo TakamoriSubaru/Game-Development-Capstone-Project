@@ -14,7 +14,7 @@ namespace Oddyseus.UI
         public static readonly Color Olive = Theme.Hex("#6B8F5B");
         public static readonly Color DarkBrown = Theme.Hex("#4B3B2E");
         public static readonly Color Gold = Theme.Hex("#EBB24E");
-        public static readonly Color Muted = Theme.Hex("#8A7560");
+        public static readonly Color Muted = Theme.Hex("#6B5846");   // lebih gelap supaya teks kedua mudah dibaca
         public static readonly Color Danger = Theme.Hex("#B5483A");
         public static readonly Color Disabled = new Color(0.55f, 0.5f, 0.45f, 1f);
     }
@@ -175,6 +175,7 @@ namespace Oddyseus.UI
         }
 
         // Frame 9-slice. borderScale < 1 mengecilkan dekorasi sudut (border asli dihitung di UIAssetImporter).
+        // Catatan Unity: pixelsPerUnitMultiplier BESAR = border KECIL, jadi nilainya harus 1 / borderScale.
         public static Image Sliced(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1, float borderScale)
         {
             var rt = UIFactory.NewRect(parent, name);
@@ -182,7 +183,7 @@ namespace Oddyseus.UI
             var img = rt.gameObject.AddComponent<Image>();
             img.sprite = UISprites.Get(sprite);
             img.type = Image.Type.Sliced;
-            img.pixelsPerUnitMultiplier = borderScale;
+            img.pixelsPerUnitMultiplier = 1f / Mathf.Max(0.05f, borderScale);
             img.raycastTarget = false;
             return img;
         }
@@ -204,18 +205,25 @@ namespace Oddyseus.UI
         }
 
         // Teks asli (tidak pernah dipanggang ke gambar). title = Cinzel bold, selain itu EB Garamond.
+        // Satu tempat untuk memperbesar SEMUA teks. 1.0 = ukuran lama, 1.15 = 15% lebih besar.
+        public static float TextScale = 1.15f;
+
         public static Text Txt(Transform parent, string text, int size, Color color, TextAnchor align,
                                float x0, float y0, float x1, float y1, bool title = false)
         {
-            var t = UIFactory.Label(parent, text, size, color, align, x0, y0, x1, y1);
+            var t = UIFactory.Label(parent, text, Mathf.RoundToInt(size * TextScale), color, align, x0, y0, x1, y1);
             Font body = UISprites.BodyFont;
             if (body != null) t.font = body;
             if (title)
             {
                 var f = UISprites.TitleFont;
                 if (f != null) t.font = f;
-                t.fontStyle = FontStyle.Bold;
             }
+            t.fontStyle = FontStyle.Bold;   // semua teks tebal supaya jelas di atas parchment
+            // Teks tidak boleh keluar kotak: mengecil otomatis kalau terlalu panjang.
+            t.resizeTextForBestFit = true;
+            t.resizeTextMaxSize = t.fontSize;
+            t.resizeTextMinSize = Mathf.Max(9, Mathf.RoundToInt(size * 0.65f));
             return t;
         }
 
@@ -290,9 +298,10 @@ namespace Oddyseus.UI
         {
             var img = Sliced(parent, name, "frames/frame_menu_button", x0, y0, x1, y1, 0.6f);
             var b = TintButton(img, onClick);
-            Pic(img.transform, "Icon", icon, 0.045f, 0.12f, 0.20f, 0.88f);
-            Txt(img.transform, title, 24, Parch.DarkBrown, TextAnchor.LowerLeft, 0.24f, 0.46f, 0.92f, 0.92f, true);
-            Txt(img.transform, subtitle, 16, Parch.Muted, TextAnchor.UpperLeft, 0.24f, 0.08f, 0.92f, 0.50f);
+            // Isi tombol berada di dalam dekorasi sudut (x 0.10 - 0.88); ikon tidak digepengkan.
+            FitPic(img.transform, "Icon", icon, 0.10f, 0.14f, 0.25f, 0.86f);
+            Txt(img.transform, title, 26, Parch.DarkBrown, TextAnchor.LowerLeft, 0.27f, 0.48f, 0.88f, 0.92f, true);
+            Txt(img.transform, subtitle, 18, Parch.DarkBrown, TextAnchor.UpperLeft, 0.27f, 0.08f, 0.88f, 0.50f);
             return b;
         }
 
@@ -380,12 +389,26 @@ namespace Oddyseus.UI
 
         // Bar judul sesuai mockup: judul besar (Cinzel) diapit daun, tombol BACK di kiri, lalu pita Greek-key di bawahnya.
         // redStrip: pita terracotta (Armory, Achievements) atau cokelat (Hub, Compendium, Legends).
+        // Greek-key strip: repeated (tiled) at its real height so the pattern is not stretched.
+        public static void Strip(Transform parent, string name, string sprite, float x0, float y0, float x1, float y1)
+        {
+            var sp = UISprites.Get(sprite);
+            if (sp == null) return;
+            var rt = UIFactory.NewRect(parent, name);
+            UIFactory.Stretch(rt, x0, y0, x1, y1);
+            var raw = rt.gameObject.AddComponent<RawImage>();
+            raw.raycastTarget = false;
+            rt.gameObject.AddComponent<TileStrip>().Setup(sp);
+        }
+
         public static void TitleBar(Transform parent, string title, Action onBack, bool redStrip = false)
         {
-            Pic(parent, "KeyStrip", redStrip ? "ornaments/key_strip_terracotta" : "ornaments/key_strip_brown", 0f, 0.868f, 1f, 0.905f, false);
-            Pic(parent, "SprigL", "ornaments/sprig_left", 0.255f, 0.915f, 0.335f, 0.99f);
-            Pic(parent, "SprigR", "ornaments/sprig_right", 0.665f, 0.915f, 0.745f, 0.99f);
-            Txt(parent, title, 48, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.31f, 0.91f, 0.69f, 0.995f, true);
+            Strip(parent, "KeyStrip", redStrip ? "ornaments/key_strip_terracotta" : "ornaments/key_strip_brown", 0f, 0.862f, 1f, 0.906f);
+            // Daun mengikuti panjang judul supaya tidak menimpa huruf (judul panjang seperti PACK COMPENDIUM).
+            float half = 0.011f * title.Length + 0.03f;
+            Pic(parent, "SprigL", "ornaments/sprig_left", 0.5f - half - 0.085f, 0.915f, 0.5f - half, 0.99f);
+            Pic(parent, "SprigR", "ornaments/sprig_right", 0.5f + half, 0.915f, 0.5f + half + 0.085f, 0.99f);
+            Txt(parent, title, 48, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.5f - half, 0.91f, 0.5f + half, 0.995f, true);
             if (onBack != null)
             {
                 var b = Pill(parent, "Back", "BACK", "parchment", 0.045f, 0.925f, 0.17f, 0.985f, onBack, 22, 0.5f);
@@ -408,13 +431,23 @@ namespace Oddyseus.UI
                 case Role.BufferDebuffer: key = "chip_buffer"; break;
             }
             var img = FitPic(parent, "RoleChip", "chips_badges/" + key, x0, y0, x1, y1);
-            Txt(img.transform, UnitData.RoleLabel(role).Replace("/", "/\n"), 14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.42f, 0.18f, 0.88f, 0.82f, true);
+            var lbl = Txt(img.transform, UnitData.RoleLabel(role), 14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.42f, 0.18f, 0.88f, 0.82f, true);
+            lbl.resizeTextForBestFit = true; lbl.resizeTextMinSize = 9; lbl.resizeTextMaxSize = 14;
         }
 
         public static void RewardBadge(Transform parent, RewardKind type, float x0, float y0, float x1, float y1)
         {
             var img = FitPic(parent, "Badge", "chips_badges/badge_" + type.ToString().ToLowerInvariant(), x0, y0, x1, y1);
-            Txt(img.transform, type.ToString(), 13, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.42f, 0.18f, 0.92f, 0.82f, true);
+            var lbl = Txt(img.transform, type.ToString(), 20, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.40f, 0.10f, 0.95f, 0.90f, true);
+            lbl.resizeTextForBestFit = true; lbl.resizeTextMinSize = 10; lbl.resizeTextMaxSize = 24;
+        }
+
+        // Penghitung (mis. "Found 1/20") di atas pil parchment supaya terbaca di atas vignette.
+        public static void Counter(Transform parent, string text, int size, float x0, float y0, float x1, float y1)
+        {
+            var pill = Sliced(parent, "Counter", "buttons/btn_parchment_normal", x0, y0, x1, y1, 0.55f);
+            pill.color = new Color(1f, 0.97f, 0.9f, 0.92f);
+            Txt(pill.transform, text, size, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.06f, 0.1f, 0.94f, 0.9f, true);
         }
 
         // Ribbon bernama (teks asli di tengah).

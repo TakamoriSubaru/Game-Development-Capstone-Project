@@ -16,9 +16,9 @@ namespace Oddyseus.UI
         protected override void Populate(RectTransform body)
         {
             ParchUI.Txt(body, "Packs, bosses, equipment", 18, Parch.DarkBrown, TextAnchor.MiddleLeft, 0.045f, 0.80f, 0.45f, 0.865f);
-            ParchUI.Txt(body, "Discovered " + MetaProgress.PackSeenCount + "/" + PackCatalog.All.Length +
-                        "   |   Cleared " + MetaProgress.PackClearedCount + "/" + PackCatalog.All.Length,
-                        20, Parch.DarkBrown, TextAnchor.MiddleRight, 0.55f, 0.80f, 0.955f, 0.865f);
+            ParchUI.Counter(body, "Discovered " + MetaProgress.PackSeenCount + "/" + PackCatalog.All.Length +
+                            "  |  Cleared " + MetaProgress.PackClearedCount + "/" + PackCatalog.All.Length,
+                            20, 0.56f, 0.795f, 0.965f, 0.875f);
 
             var names = new string[DungeonState.Floors];
             for (int f = 0; f < names.Length; f++) names[f] = "FLOOR " + (f + 1);
@@ -79,13 +79,14 @@ namespace Oddyseus.UI
 
             // 3) teks: nama di ribbon, tipe, Boss, Equipment (semuanya teks asli)
             ParchUI.Ribbon(frame, seen ? (cleared ? "gold" : "terracotta") : "bluegrey", seen ? p.Name : "???", 17, 0.03f, 0.275f, 0.97f, 0.465f);
-            string god = seen && p.GodRealmChance > 0f ? "   God Realm " + Mathf.RoundToInt(p.GodRealmChance * 100f) + "%" : "";
-            ParchUI.Txt(frame, seen ? NodeInfo.EnvName(p.Env) + " / " + p.Theme : "Undiscovered", 14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.20f, 0.225f, 0.80f, 0.285f);
-            ParchUI.Txt(frame, "BOSS: " + (cleared ? p.Boss : "???"), 14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.20f, 0.165f, 0.80f, 0.225f, true);
+            string god = seen && p.GodRealmChance > 0f ? "God Realm " + Mathf.RoundToInt(p.GodRealmChance * 100f) + "%" : "";
+            float tx1 = cleared ? 0.74f : 0.80f;   // the gold seal on a cleared scroll sits at the right
+            // three lines between the ribbon fold (starts 0.275) and the bottom roller (ends 0.07)
+            ParchUI.Txt(frame, seen ? NodeInfo.EnvName(p.Env) + " / " + p.Theme + (god.Length > 0 ? " - " + god : "") : "Undiscovered",
+                        14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.20f, 0.205f, tx1, 0.265f);
+            ParchUI.Txt(frame, "BOSS: " + (cleared ? p.Boss : "???"), 14, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.20f, 0.145f, tx1, 0.205f, true);
             var eq = EquipmentCatalog.ForPack(p.Id);
-            ParchUI.Txt(frame, "EQUIPMENT: " + (cleared && eq != null ? eq.Name : "???"), 13, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.20f, 0.105f, 0.80f, 0.165f, true);
-            ParchUI.Txt(frame, cleared ? (god.Trim().Length > 0 ? god.Trim() : "") : "Defeat the boss to reveal.", 12,
-                        cleared ? Parch.Olive : Parch.Muted, TextAnchor.MiddleCenter, 0.20f, 0.05f, 0.80f, 0.105f);
+            ParchUI.Txt(frame, "EQUIPMENT: " + (cleared && eq != null ? eq.Name : "???"), 13, Parch.DarkBrown, TextAnchor.MiddleCenter, 0.20f, 0.085f, tx1, 0.145f, true);
         }
 
         // Nama file lukisan Pack: pack_<nn>_<slug> (urutan sama dengan manifest aset).

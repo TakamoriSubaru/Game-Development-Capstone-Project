@@ -121,7 +121,7 @@ namespace Oddyseus.UI
         {
             float mid = x0 + (x1 - x0) * 0.30f;
             ParchUI.FitPic(card, "StatIcon", icon, x0, y0, mid, y1);
-            ParchUI.Txt(card, "<size=11>" + label + "</size> " + value, 16, Parch.DarkBrown, TextAnchor.MiddleLeft, mid + 0.01f, y0, x1, y1);
+            ParchUI.Txt(card, label + " " + value, 16, Parch.DarkBrown, TextAnchor.MiddleLeft, mid + 0.01f, y0, x1, y1);
         }
     }
 }

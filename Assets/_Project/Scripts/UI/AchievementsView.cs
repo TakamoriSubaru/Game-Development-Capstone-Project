@@ -15,7 +15,7 @@ namespace Oddyseus.UI
         {
             var all = AchievementCatalog.All;
             ParchUI.Txt(body, "Rewards: extra characters, costumes, emblems and titles.", 18, Parch.DarkBrown, TextAnchor.MiddleLeft, 0.03f, 0.80f, 0.60f, 0.86f);
-            ParchUI.Txt(body, "Unlocked " + AchievementCatalog.UnlockedCount + "/" + all.Count, 22, Parch.DarkBrown, TextAnchor.MiddleRight, 0.60f, 0.80f, 0.97f, 0.86f, true);
+            ParchUI.Counter(body, "Unlocked " + AchievementCatalog.UnlockedCount + "/" + all.Count, 22, 0.74f, 0.795f, 0.965f, 0.87f);
 
             RectTransform list;
             ParchUI.VScroll(body, "List", 0.025f, 0.10f, 0.975f, 0.795f, out list);

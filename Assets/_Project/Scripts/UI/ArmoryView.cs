@@ -26,8 +26,10 @@ namespace Oddyseus.UI
             int found = 0;
             if (!blessings)
                 for (int i = 0; i < count; i++) if (MetaProgress.IsPackCleared(EquipmentCatalog.All[i].PackId)) found++;
-            ParchUI.Txt(body, blessings ? "Blessings: single-use, drain the target's Stamina." : "Found " + found + "/" + count,
-                        20, Parch.DarkBrown, TextAnchor.MiddleRight, 0.45f, 0.77f, 0.97f, 0.85f);
+            if (blessings)
+                ParchUI.Txt(body, "Blessings: single-use, drain the target's Stamina.", 18, Parch.DarkBrown, TextAnchor.MiddleLeft, 0.43f, 0.755f, 0.72f, 0.875f);
+            else
+                ParchUI.Counter(body, "Found " + found + "/" + count, 20, 0.74f, 0.79f, 0.965f, 0.87f);
 
             if (sel >= count) sel = 0;
             if (blessings) BlessingGrid(body); else EquipmentGrid(body);
@@ -68,6 +70,13 @@ namespace Oddyseus.UI
             }
         }
 
+        // Stand-in icons (relic art, in pack order). Put a PNG named after the item slug in Resources/UI/equipment/ to override.
+        static readonly string[] StandIn = {
+            "relicicons/relic_11_ca", "relicicons/relic_19_lf", "relicicons/relic_18_ce", "relicicons/relic_08_sc", "relicicons/relic_16_aw",
+            "relicicons/relic_04_bs", "relicicons/relic_17_ch", "relicicons/relic_20_se", "relicicons/relic_24_hc", "relicicons/relic_03_wo",
+            "relicicons/relic_28_sy", "relicicons/relic_50_hr", "relicicons/relic_41_pp", "relicicons/relic_21_st", "relicicons/relic_22_cw",
+            "relicicons/relic_25_cv", "relicicons/relic_48_pt", "relicicons/relic_51_ae", "relicicons/relic_32_ps", "relicicons/relic_31_bo" };
+
         static string Slug(string name)
         {
             return Regex.Replace(name.ToLowerInvariant().Replace("'", ""), "[^a-z0-9]+", "_").Trim('_');
@@ -77,6 +86,7 @@ namespace Oddyseus.UI
         static void Medallion(Transform parent, EquipmentInfo e, float x0, float y0, float x1, float y1, int codeSize)
         {
             var sp = Resources.Load<Sprite>("UI/equipment/" + Slug(e.Name));
+            if (sp == null) { int k = System.Array.IndexOf(EquipmentCatalog.All, e); if (k >= 0 && k < StandIn.Length) sp = UISprites.Get(StandIn[k]); }
             if (sp != null)
             {
                 var irt = UIFactory.NewRect(parent, "Icon");

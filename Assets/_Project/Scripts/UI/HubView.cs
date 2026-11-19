@@ -20,7 +20,7 @@ namespace Oddyseus.UI
             ParchUI.Solid(Root, "Block", new Color(0f, 0f, 0f, 0f), 0f, 0f, 1f, 1f).raycastTarget = true;
             var safe = ParchUI.SafeArea(Root);
 
-            ParchUI.TitleBar(safe, "DUNGEON MODE", () => SceneFader.LoadScene(GameScenes.Lobby), false);
+            ParchUI.TitleBar(safe, "DUNGEON", () => SceneFader.LoadScene(GameScenes.Lobby), false);
 
             // --- kompas: teks judul asli di cakram kosong ---
             var comp = ParchUI.FitPic(safe, "Compass", "hub/compass_medallion", 0.335f, 0.25f, 0.665f, 0.86f);

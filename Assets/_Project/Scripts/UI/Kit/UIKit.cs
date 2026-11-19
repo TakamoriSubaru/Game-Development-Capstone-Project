@@ -399,7 +399,7 @@ public static class UIKit
         rt.sizeDelta = UITheme.CompassSize;
 
         // Parchment strip behind the nodes so the labels stay readable on any scene
-        Image backing = NewImage("Backing (replace sprite)", rt, "pa_panel", Image.Type.Sliced, A(Color.white, 0.95f), false);
+        Image backing = NewImage("Backing (replace sprite)", rt, "pa_plate", Image.Type.Sliced, A(Color.white, 0.95f), false);
         Stretch(backing.rectTransform);
 
         Image line = NewImage("Line (replace sprite)", rt, null, Image.Type.Simple, A(UITheme.Ink, 0.6f), false);
